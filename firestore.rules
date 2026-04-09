@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Document ID: {userId} (matches Firebase Auth UID)
+    // Fields:
+    //   - uid: string (required, immutable)
+    //   - email: string (required)
+    //   - username: string (required, max 50 chars)
+    //   - createdAt: timestamp (required, immutable)
+    //
+    // Collection: pages
+    // Document ID: {pageId} (auto-generated)
+    // Fields:
+    //   - userId: string (required, immutable, matches owner)
+    //   - title: string (required, max 100 chars)
+    //   - slug: string (required, max 100 chars)
+    //   - content: string (required, max 1000000 chars - JSON string)
+    //   - createdAt: timestamp (required, immutable)
+    //   - updatedAt: timestamp (required)
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+    
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // Domain Validators
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'username', 'createdAt']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             data.email is string && isValidEmail(data.email) &&
+             data.username is string && data.username.size() > 0 && data.username.size() <= 50 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidPage(data) {
+      return hasOnlyAllowedFields(['userId', 'title', 'slug', 'content', 'createdAt', 'updatedAt']) &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.slug is string && data.slug.size() > 0 && data.slug.size() <= 100 &&
+             data.content is string && data.content.size() <= 1000000 &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    match /users/{userId} {
+      // Anyone can read user profiles to resolve usernames to userIds
+      allow read: if true;
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && areImmutableFieldsUnchanged(['uid', 'createdAt']);
+      allow delete: if false; // Soft delete or no delete for now
+    }
+
+    match /pages/{pageId} {
+      // Anyone can read pages (for the public site)
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidPage(request.resource.data);
+      allow update: if isDocOwner() && isValidPage(request.resource.data) && areImmutableFieldsUnchanged(['userId', 'createdAt']);
+      allow delete: if isDocOwner();
+    }
+  }
+}

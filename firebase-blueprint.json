@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the platform",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "username": { "type": "string", "description": "Unique username for the public URL" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "username", "createdAt"]
+    },
+    "Page": {
+      "title": "Page",
+      "description": "A web page created by a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "ID of the user who owns this page" },
+        "title": { "type": "string", "description": "Internal title of the page" },
+        "slug": { "type": "string", "description": "URL slug for the page" },
+        "content": { "type": "string", "description": "JSON stringified array of page elements" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "slug", "content", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "/pages/{pageId}": {
+      "schema": { "$ref": "#/entities/Page" },
+      "description": "User created pages"
+    }
+  }
+}
