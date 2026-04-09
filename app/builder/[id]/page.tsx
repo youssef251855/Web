@@ -91,13 +91,22 @@ export default function BuilderPage() {
     }
   };
 
+  const getPublicUrl = () => {
+    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+    if (rootDomain) {
+      const protocol = rootDomain.includes('localhost') ? 'http' : 'https';
+      return `${protocol}://${username}.${rootDomain}/${pageSlug}`;
+    }
+    return `${typeof window !== 'undefined' ? window.location.origin : ''}/${username}/${pageSlug}`;
+  };
+
   const handlePublish = async () => {
     await handleSave();
     setShowPublishModal(true);
   };
 
   const copyToClipboard = () => {
-    const url = `${window.location.origin}/${username}/${pageSlug}`;
+    const url = getPublicUrl();
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -136,7 +145,7 @@ export default function BuilderPage() {
         </div>
         <div className="flex items-center space-x-2">
           <button
-            onClick={() => window.open(`/${username}/${pageSlug}`, '_blank')}
+            onClick={() => window.open(getPublicUrl(), '_blank')}
             className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center text-sm hover:bg-gray-200 transition"
           >
             Preview
@@ -382,7 +391,7 @@ export default function BuilderPage() {
                 <input
                   type="text"
                   readOnly
-                  value={`${typeof window !== 'undefined' ? window.location.origin : ''}/${username}/${pageSlug}`}
+                  value={getPublicUrl()}
                   className="w-full px-3 py-2 bg-gray-50 border rounded-md text-sm text-gray-700 outline-none"
                 />
                 <button
@@ -401,7 +410,7 @@ export default function BuilderPage() {
                   Close
                 </button>
                 <button
-                  onClick={() => window.open(`/${username}/${pageSlug}`, '_blank')}
+                  onClick={() => window.open(getPublicUrl(), '_blank')}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
                 >
                   Visit Page

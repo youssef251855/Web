@@ -86,6 +86,15 @@ export default function Dashboard() {
     await setUsername(newUsername);
   };
 
+  const getPublicUrl = (slug: string) => {
+    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+    if (rootDomain) {
+      const protocol = rootDomain.includes('localhost') ? 'http' : 'https';
+      return `${protocol}://${username}.${rootDomain}/${slug}`;
+    }
+    return `/${username}/${slug}`;
+  };
+
   if (loading || (user && loadingPages)) {
     return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
   }
@@ -161,7 +170,7 @@ export default function Dashboard() {
             {pages.map((page) => (
               <div key={page.id} className="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition">
                 <h3 className="font-semibold text-lg mb-2 truncate">{page.title}</h3>
-                <p className="text-sm text-gray-500 mb-4 truncate">/{username}/{page.slug}</p>
+                <p className="text-sm text-gray-500 mb-4 truncate">{getPublicUrl(page.slug)}</p>
                 <div className="flex space-x-3">
                   <Link
                     href={`/builder/${page.id}`}
@@ -170,7 +179,7 @@ export default function Dashboard() {
                     <Edit className="w-4 h-4 mr-2" /> Edit
                   </Link>
                   <Link
-                    href={`/${username}/${page.slug}`}
+                    href={getPublicUrl(page.slug)}
                     target="_blank"
                     className="flex-1 bg-blue-50 text-blue-600 py-2 rounded-md flex items-center justify-center hover:bg-blue-100 transition"
                   >
