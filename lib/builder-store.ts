@@ -26,22 +26,56 @@ export interface ElementStyle {
   flexWrap?: 'nowrap' | 'wrap' | 'wrap-reverse';
   alignItems?: string;
   fontFamily?: string;
+  [key: string]: any; // Allow custom CSS properties
 }
 
-export interface ElementAction {
-  type: 'none' | 'url' | 'page' | 'create_record' | 'delete_record';
-  value: string; // The URL, page slug, or tableId
-  payload?: any; // For create_record, e.g. mapping of field updates
+export type ActionType = 
+  | 'navigate_page' 
+  | 'navigate_back'    
+  | 'navigate_url' 
+  | 'open_modal'       
+  | 'close_modal'
+  | 'db_create' 
+  | 'db_update'
+  | 'db_delete'
+  | 'db_fetch'
+  | 'auth_signup' 
+  | 'auth_login' 
+  | 'auth_logout'
+  | 'auth_reset'
+  | 'file_upload' 
+  | 'file_delete'
+  | 'api_request'
+  | 'logic_if' 
+  | 'logic_delay'
+  | 'logic_math'
+  | 'logic_set_variable'
+  | 'ui_show' 
+  | 'ui_hide'
+  | 'ui_set_text'
+  | 'run_js';
+
+export interface ActionStep {
+  id: string;
+  type: ActionType;
+  params: Record<string, any>;
+  conditions?: { field: string; operator: string; value: any }[];
+}
+
+export interface ElementEvent {
+  id: string; // e.g. onClick, onLoad, onHover
+  trigger: string;
+  actions: ActionStep[];
 }
 
 export interface DataSource {
   tableId: string;
   filters?: any[];
+  limit?: number;
+  sort?: { field: string, direction: 'asc' | 'desc' };
 }
 
 export interface DataMapping {
-  // maps element property to a field name in the record
-  // e.g. { content: 'Price', subtitle: 'Category' }
   [key: string]: string; 
 }
 
@@ -51,16 +85,33 @@ export interface PageElement {
   content: any;
   style: ElementStyle;
   position: Position;
-  action?: ElementAction;
+  
+  // Actions replace old simple action
+  events?: ElementEvent[];
+  
+  // Custom code & Advanced
+  customCss?: string;
+  customJs?: string; // Component-level lifecycle hooks or logic
+  customId?: string; // Allows CSS targeting
+  
   dataSource?: DataSource;
   dataMapping?: DataMapping;
 }
 
+export interface AppVariable {
+  id: string;
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  defaultValue: any;
+} // State Management variables
+
 interface BuilderState {
   elements: PageElement[];
+  variables: AppVariable[];
   selectedElementId: string | null;
   isDragging: boolean;
   setElements: (elements: PageElement[]) => void;
+  setVariables: (variables: AppVariable[]) => void;
   addElement: (type: ElementType, position: Position) => void;
   updateElement: (id: string, updates: Partial<PageElement>) => void;
   removeElement: (id: string) => void;
@@ -168,9 +219,11 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
 
 export const useBuilderStore = create<BuilderState>((set) => ({
   elements: [],
+  variables: [],
   selectedElementId: null,
   isDragging: false,
   setElements: (elements) => set({ elements }),
+  setVariables: (variables) => set({ variables }),
   addElement: (type, position) => set((state) => ({
     elements: [
       ...state.elements,
@@ -180,7 +233,7 @@ export const useBuilderStore = create<BuilderState>((set) => ({
         content: defaultContent[type],
         style: { ...defaultStyle[type] },
         position,
-        action: type === 'button' ? { type: 'none', value: '' } : undefined,
+        events: type === 'button' ? [{ id: uuidv4(), trigger: 'onClick', actions: [] }] : [],
       },
     ],
   })),

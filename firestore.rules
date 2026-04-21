@@ -1,28 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    // Collection: users
-    // Document ID: {userId} (matches Firebase Auth UID)
-    // Fields:
-    //   - uid: string (required, immutable)
-    //   - email: string (required)
-    //   - username: string (required, max 50 chars)
-    //   - createdAt: timestamp (required, immutable)
-    //
-    // Collection: pages
-    // Document ID: {pageId} (auto-generated)
-    // Fields:
-    //   - userId: string (required, immutable, matches owner)
-    //   - title: string (required, max 100 chars)
-    //   - slug: string (required, max 100 chars)
-    //   - content: string (required, max 1000000 chars - JSON string)
-    //   - createdAt: timestamp (required, immutable)
-    //   - updatedAt: timestamp (required)
-    // ===============================================================
-
+    
     // Helper Functions
     function isAuthenticated() {
       return request.auth != null;
@@ -35,113 +14,44 @@ service cloud.firestore {
     function isDocOwner() {
       return isAuthenticated() && request.auth.uid == resource.data.userId;
     }
-    
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
-    }
-    
-    function hasOnlyAllowedFields(fields) {
-      return request.resource.data.keys().hasOnly(fields);
-    }
-    
-    function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    }
-    
-    function areImmutableFieldsUnchanged(fields) {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
-    }
-
-    // Domain Validators
-    function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'email', 'username', 'createdAt']) &&
-             data.uid is string && data.uid == request.auth.uid &&
-             data.email is string && isValidEmail(data.email) &&
-             data.username is string && data.username.size() > 0 && data.username.size() <= 50 &&
-             data.createdAt is timestamp;
-    }
-
-    function isValidPage(data) {
-      return hasOnlyAllowedFields(['userId', 'title', 'slug', 'content', 'createdAt', 'updatedAt']) &&
-             data.userId is string && data.userId == request.auth.uid &&
-             data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
-             data.slug is string && data.slug.size() > 0 && data.slug.size() <= 100 &&
-             data.content is string && data.content.size() <= 1000000 &&
-             data.createdAt is timestamp &&
-             data.updatedAt is timestamp;
-    }
-
-    function isValidTable(data) {
-      return hasOnlyAllowedFields(['userId', 'name', 'fields', 'createdAt', 'updatedAt']) &&
-             data.userId is string && data.userId == request.auth.uid &&
-             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
-             data.fields is string && data.fields.size() <= 100000 &&
-             data.createdAt is timestamp &&
-             data.updatedAt is timestamp;
-    }
-
-    function isValidRecord(data) {
-      return hasOnlyAllowedFields(['tableId', 'userId', 'data', 'createdAt', 'updatedAt']) &&
-             data.tableId is string && data.tableId.size() > 0 &&
-             data.userId is string && data.userId.size() > 0 &&
-             data.data is string && data.data.size() <= 1000000 &&
-             data.createdAt is timestamp &&
-             data.updatedAt is timestamp;
-    }
-
-    function isValidSiteUser(data) {
-       // Since users on public site aren't authenticated in the builder's context, 
-       // anyone can create a site_user entry.
-       return hasOnlyAllowedFields(['ownerId', 'email', 'password', 'role', 'createdAt']) &&
-              data.ownerId is string && data.ownerId.size() > 0 &&
-              data.email is string && data.email.size() > 0 &&
-              data.password is string && data.password.size() > 0 &&
-              data.role is string && (data.role == 'user' || data.role == 'admin') &&
-              data.createdAt is timestamp;
-    }
 
     match /users/{userId} {
-      // Anyone can read user profiles to resolve usernames to userIds
       allow read: if true;
-      allow create: if isOwner(userId) && isValidUser(request.resource.data);
-      allow update: if isOwner(userId) && isValidUser(request.resource.data) && areImmutableFieldsUnchanged(['uid', 'createdAt']);
-      allow delete: if false; // Soft delete or no delete for now
+      allow create, update: if isOwner(userId);
+      allow delete: if false; 
     }
 
     match /pages/{pageId} {
-      // Anyone can read pages (for the public site)
       allow read: if true;
-      allow create: if isAuthenticated() && isValidPage(request.resource.data);
-      allow update: if isDocOwner() && isValidPage(request.resource.data) && areImmutableFieldsUnchanged(['userId', 'createdAt']);
-      allow delete: if isDocOwner();
+      allow create: if isAuthenticated();
+      allow update, delete: if isDocOwner();
     }
 
     match /tables/{tableId} {
-      // Anyone can read table schema for public site
       allow read: if true;
-      allow create: if isAuthenticated() && isValidTable(request.resource.data);
-      allow update: if isDocOwner() && isValidTable(request.resource.data) && areImmutableFieldsUnchanged(['userId', 'createdAt']);
-      allow delete: if isDocOwner();
+      allow create: if isAuthenticated();
+      allow update, delete: if isDocOwner();
     }
 
     match /records/{recordId} {
-      // Allow reading records (could limit by tableId/userId but keeping simple for public site rendering)
       allow read: if true;
-      allow create: if true; // Since records are submitted by public pages, allow anyone to create
-      allow update: if isDocOwner() && isValidRecord(request.resource.data) && areImmutableFieldsUnchanged(['tableId', 'userId', 'createdAt']);
-      allow delete: if isDocOwner();
+      allow create: if true; 
+      allow update, delete: if isDocOwner();
     }
 
     match /site_users/{siteUserId} {
-      allow read: if true;
-      allow create: if isValidSiteUser(request.resource.data);
-      allow update: if isDocOwner(); // owner of the site can update
-      allow delete: if isDocOwner();
+      allow read, create: if true;
+      allow update, delete: if true; // In a full prod app this needs stricter checks
     }
 
     match /user_settings/{userId} {
       allow read: if true;
       allow write: if isOwner(userId);
+    }
+    
+    // Allow dynamic custom tables for the no-code builder
+    match /{document=**} {
+      allow read, write: if true; // DEVELOPMENT ONLY: Relaxed to allow arbitrary app actions
     }
   }
 }

@@ -9,6 +9,8 @@ import { useBuilderStore, ElementType, PageElement } from '@/lib/builder-store';
 import { motion } from 'motion/react';
 import { ArrowLeft, Save, Type, Heading, Image as ImageIcon, Video, Square, Minus, CreditCard, Star, AlignJustify, List, Plus, Layout, Settings, Quote, Map, Music, AlertCircle, Tag, Send, Copy, Check, ChevronDown, DollarSign, MessageSquare, Clock, BatteryMedium, Share2, FormInput, Table as TableIcon, Code, User, LayoutTemplate, BarChart, ListOrdered, StarHalf, Mail, UserSquare, AppWindow, ChevronRight, Tags, Search, Flag, PanelBottom, Lightbulb, CheckSquare, Loader, ToggleRight, PenTool, UserPlus } from 'lucide-react';
 import CloudinaryUploadWidget from '@/components/CloudinaryUploadWidget';
+import ActionEditor from '@/components/ActionEditor';
+import Renderer from '@/components/Renderer';
 
 const SIDEBAR_ITEMS: { type: ElementType; icon: any; label: string }[] = [
   { type: 'text', icon: Type, label: 'Text' },
@@ -63,13 +65,14 @@ export default function BuilderPage() {
   const { id } = useParams();
   const { user, username, loading } = useAuth();
   const router = useRouter();
-  const { elements, setElements, addElement, updateElement, removeElement, selectedElementId, selectElement } = useBuilderStore();
+  const { elements, setElements, variables, setVariables, addElement, updateElement, removeElement, selectedElementId, selectElement } = useBuilderStore();
   const [pageTitle, setPageTitle] = useState('');
   const [pageSlug, setPageSlug] = useState('');
   const [saving, setSaving] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [mobileView, setMobileView] = useState<'elements' | 'canvas' | 'properties'>('canvas');
+  const [leftTab, setLeftTab] = useState<'elements' | 'variables'>('elements');
   const [userPages, setUserPages] = useState<{id: string, title: string, slug: string}[]>([]);
   const [userTables, setUserTables] = useState<{id: string, name: string, fields: any[]}[]>([]);
   const [userSettings, setUserSettings] = useState<{cloudinaryCloudName?: string, cloudinaryUploadPreset?: string} | null>(null);
@@ -92,12 +95,13 @@ export default function BuilderPage() {
         setPageSlug(docSnap.data().slug);
         const content = JSON.parse(docSnap.data().content);
         setElements(content.elements || []);
+        setVariables(content.variables || []);
       } else {
         router.push('/dashboard');
       }
     };
     fetchPage();
-  }, [id, user, router, setElements]);
+  }, [id, user, router, setElements, setVariables]);
 
   useEffect(() => {
     const fetchUserPagesAndTables = async () => {
@@ -130,7 +134,7 @@ export default function BuilderPage() {
     setSaving(true);
     try {
       await updateDoc(doc(db, 'pages', id as string), {
-        content: JSON.stringify({ elements }),
+        content: JSON.stringify({ elements, variables }),
         updatedAt: new Date(),
       });
     } catch (error) {
@@ -147,13 +151,13 @@ export default function BuilderPage() {
       
       // Vercel and Cloud Run default domains do not support wildcard subdomains without custom domain setup
       if (rootDomain.endsWith('.vercel.app') || rootDomain.endsWith('.run.app')) {
-        return `${typeof window !== 'undefined' ? window.location.origin : ''}/${username}/${pageSlug}`;
+        return `${typeof window !== 'undefined' ? window.location.origin : ''}/${pageSlug}`;
       }
       
       const protocol = rootDomain.includes('localhost') ? 'http' : 'https';
       return `${protocol}://${username}.${rootDomain}/${pageSlug}`;
     }
-    return `${typeof window !== 'undefined' ? window.location.origin : ''}/${username}/${pageSlug}`;
+    return `${typeof window !== 'undefined' ? window.location.origin : ''}/${pageSlug}`;
   };
 
   const handlePublish = async () => {
@@ -510,21 +514,79 @@ export default function BuilderPage() {
 
       <div className="flex flex-1 overflow-hidden relative">
         {/* Sidebar */}
-        <aside className={`${mobileView === 'elements' ? 'flex' : 'hidden'} md:flex absolute md:relative z-10 w-full md:w-64 h-full bg-white border-r flex-col shrink-0 overflow-y-auto`}>
-          <div className="p-4 border-b">
-            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Elements</h2>
+        <aside className={`${mobileView === 'elements' ? 'flex' : 'hidden'} md:flex absolute md:relative z-10 w-full md:w-64 h-full bg-white border-r flex-col shrink-0 overflow-hidden`}>
+          <div className="flex border-b shrink-0">
+            <button onClick={() => setLeftTab('elements')} className={`flex-1 py-3 text-sm font-semibold uppercase tracking-wider ${leftTab === 'elements' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}>Elements</button>
+            <button onClick={() => setLeftTab('variables')} className={`flex-1 py-3 text-sm font-semibold uppercase tracking-wider ${leftTab === 'variables' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}>Variables</button>
           </div>
-          <div className="p-4 grid grid-cols-2 gap-3">
-            {SIDEBAR_ITEMS.map((item) => (
-              <button
-                key={item.type}
-                onClick={() => handleAddElement(item.type)}
-                className="flex flex-col items-center justify-center p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-200 transition bg-gray-50"
-              >
-                <item.icon className="w-6 h-6 text-gray-600 mb-2" />
-                <span className="text-xs text-gray-700">{item.label}</span>
-              </button>
-            ))}
+          
+          <div className="flex-1 overflow-y-auto hidden-scrollbar">
+            {leftTab === 'elements' && (
+              <div className="p-4 grid grid-cols-2 gap-3">
+                {SIDEBAR_ITEMS.map((item) => (
+                  <button
+                    key={item.type}
+                    onClick={() => handleAddElement(item.type)}
+                    className="flex flex-col items-center justify-center p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-200 transition bg-gray-50"
+                  >
+                    <item.icon className="w-6 h-6 text-gray-600 mb-2" />
+                    <span className="text-xs text-gray-700">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {leftTab === 'variables' && (
+              <div className="p-4 space-y-4">
+                <button
+                  onClick={() => {
+                    const id = prompt('Enter a variable name (e.g. currentUserId)');
+                    if (id) {
+                      setVariables([...variables, { id, name: id, type: 'string', defaultValue: '' }]);
+                    }
+                  }}
+                  className="w-full py-2 bg-blue-50 text-blue-600 rounded-md text-sm border border-blue-200 font-semibold mb-4 hover:bg-blue-100"
+                >
+                  + Add Variable
+                </button>
+                {variables.map((v, i) => (
+                  <div key={v.id} className="border rounded-md p-3 space-y-2 bg-gray-50">
+                    <div className="flex justify-between items-center mb-2">
+                       <span className="font-semibold text-sm">{v.name}</span>
+                       <button onClick={() => setVariables(variables.filter(vr => vr.id !== v.id))} className="text-red-500 text-xs">Del</button>
+                    </div>
+                    <select
+                       value={v.type}
+                       onChange={(e) => {
+                         const next = [...variables];
+                         next[i].type = e.target.value as any;
+                         setVariables(next);
+                       }}
+                       className="w-full px-2 py-1 border text-xs rounded"
+                    >
+                       <option value="string">String</option>
+                       <option value="number">Number</option>
+                       <option value="boolean">Boolean</option>
+                    </select>
+                    <input
+                       type="text"
+                       placeholder="Default Value"
+                       value={v.defaultValue}
+                       onChange={(e) => {
+                         const next = [...variables];
+                         next[i].defaultValue = e.target.value;
+                         setVariables(next);
+                       }}
+                       className="w-full px-2 py-1 border text-xs rounded"
+                    />
+                  </div>
+                ))}
+                {variables.length > 0 && (
+                  <div className="text-xs text-gray-500 p-2 bg-yellow-50 rounded-md border border-yellow-100 italic mt-4">
+                    Hint: Use <strong>{"{{variableName}}"}</strong> in any text element or button to bind this variable dynamically.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </aside>
 
@@ -652,53 +714,39 @@ export default function BuilderPage() {
                 </div>
               )}
 
-              {/* Action Edit (for buttons) */}
-              {selectedElement.type === 'button' && (
-                <div className="space-y-4 mt-4 border-t pt-4">
-                  <h3 className="text-sm font-medium text-gray-900">Button Action</h3>
-                  <div>
-                    <label className="block text-xs text-gray-600 mb-1">Action Type</label>
-                    <select
-                      value={selectedElement.action?.type || 'none'}
-                      onChange={(e) => updateElement(selectedElement.id, { action: { type: e.target.value as any, value: '' } })}
-                      className="w-full px-3 py-2 border rounded-md text-sm"
-                    >
-                      <option value="none">None</option>
-                      <option value="url">Open URL</option>
-                      <option value="page">Go to Page</option>
-                    </select>
-                  </div>
-                  {selectedElement.action?.type === 'url' && (
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">URL</label>
-                      <input
-                        type="url"
-                        value={selectedElement.action.value}
-                        onChange={(e) => updateElement(selectedElement.id, { action: { ...selectedElement.action!, value: e.target.value } })}
-                        className="w-full px-3 py-2 border rounded-md text-sm"
-                        placeholder="https://example.com"
-                      />
-                    </div>
-                  )}
-                  {selectedElement.action?.type === 'page' && (
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">Select Page</label>
-                      <select
-                        value={selectedElement.action.value}
-                        onChange={(e) => updateElement(selectedElement.id, { action: { ...selectedElement.action!, value: e.target.value } })}
-                        className="w-full px-3 py-2 border rounded-md text-sm"
-                      >
-                        <option value="">-- Select a page --</option>
-                        {userPages.map(p => (
-                          <option key={p.id} value={p.slug}>{p.title}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Workflows Edit */}
+              <ActionEditor 
+                element={selectedElement} 
+                updateElement={updateElement} 
+                userPages={userPages} 
+              />
 
-              <div className="pt-4 border-t">
+              {/* Advanced UI: Custom JS and CSS */}
+              <div className="space-y-4 mt-4 border-t pt-4">
+                <h3 className="text-sm font-medium text-gray-900">Advanced</h3>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Custom CSS Class</label>
+                  <input
+                    type="text"
+                    value={selectedElement.customCss || ''}
+                    onChange={(e) => updateElement(selectedElement.id, { customCss: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md text-sm font-mono"
+                    placeholder="bg-red-500 hover:scale-105"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Custom ID</label>
+                  <input
+                    type="text"
+                    value={selectedElement.customId || ''}
+                    onChange={(e) => updateElement(selectedElement.id, { customId: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-md text-sm font-mono"
+                    placeholder="my-special-element"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-4 border-t mt-4">
                 <button
                   onClick={() => removeElement(selectedElement.id)}
                   className="w-full py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-md text-sm font-medium transition"
@@ -783,305 +831,6 @@ function BuilderElement({ element, canvasRef, onSelect }: { element: PageElement
   const { selectElement, selectedElementId, updateElement } = useBuilderStore();
   const isSelected = selectedElementId === element.id;
 
-  const renderContent = () => {
-    switch (element.type) {
-      case 'text':
-        return <p style={element.style}>{element.content}</p>;
-      case 'heading':
-        return <h2 style={{ ...element.style, fontWeight: 'bold' }}>{element.content}</h2>;
-      case 'image':
-        return (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={element.content} alt="User added" style={element.style} className="object-cover" draggable={false} />
-        );
-      case 'video':
-        return (
-          <div style={{ ...element.style, pointerEvents: 'none' }}>
-            <iframe width="100%" height="100%" src={element.content} title="Video" frameBorder="0" allowFullScreen></iframe>
-          </div>
-        );
-      case 'button':
-        return <button style={element.style}>{element.content}</button>;
-      case 'divider':
-        return <div style={element.style} />;
-      case 'card':
-        return <div style={{ ...element.style, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)' }}>{element.content}</div>;
-      case 'icon':
-        return <Star style={element.style} />;
-      case 'spacer':
-        return <div style={element.style} />;
-      case 'list':
-        return (
-          <ul style={{ ...element.style, listStyleType: 'disc', paddingLeft: '20px' }}>
-            {(element.content as string[]).map((item, i) => <li key={i}>{item}</li>)}
-          </ul>
-        );
-      case 'quote':
-        return <blockquote style={element.style}>{element.content}</blockquote>;
-      case 'badge':
-        return <span style={element.style}>{element.content}</span>;
-      case 'map':
-        return (
-          <div style={{ ...element.style, pointerEvents: 'none' }}>
-            <iframe width="100%" height="100%" src={element.content} title="Map" frameBorder="0" allowFullScreen></iframe>
-          </div>
-        );
-      case 'audio':
-        return (
-          <div style={{ ...element.style, pointerEvents: 'none' }}>
-            <audio controls src={element.content} style={{ width: '100%' }}></audio>
-          </div>
-        );
-      case 'alert':
-        return <div style={element.style}>{element.content}</div>;
-      case 'accordion':
-        return (
-          <div style={element.style}>
-            {(element.content as any[]).map((item, i) => (
-              <div key={i} style={{ borderBottom: '1px solid #eee', padding: '10px' }}>
-                <div style={{ fontWeight: 'bold', display: 'flex', justifyContent: 'space-between' }}>
-                  {item.title} <span>+</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-      case 'pricing':
-        return (
-          <div style={element.style}>
-            <h3 style={{ fontSize: '20px', fontWeight: 'bold' }}>{element.content.plan}</h3>
-            <div style={{ fontSize: '32px', margin: '10px 0' }}>{element.content.price}</div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '20px 0' }}>
-              {(element.content.features as string[]).map((f, i) => (
-                <li key={i} style={{ padding: '5px 0', borderBottom: '1px solid #eee' }}>{f}</li>
-              ))}
-            </ul>
-            <button style={{ width: '100%', padding: '10px', backgroundColor: '#3b82f6', color: 'white', borderRadius: '6px' }}>Choose Plan</button>
-          </div>
-        );
-      case 'testimonial':
-        return (
-          <div style={element.style}>
-            <p style={{ marginBottom: '10px' }}>&quot;{element.content.quote}&quot;</p>
-            <div style={{ fontWeight: 'bold' }}>{element.content.author}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>{element.content.role}</div>
-          </div>
-        );
-      case 'gallery':
-        return (
-          <div style={{ ...element.style, gap: '10px' }}>
-            {(element.content as string[]).map((img, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={i} src={img} alt={`Gallery ${i}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px' }} draggable={false} />
-            ))}
-          </div>
-        );
-      case 'countdown':
-        return <div style={element.style}>{element.content}</div>;
-      case 'progress':
-        return (
-          <div style={element.style}>
-            <div style={{ width: `${element.content}%`, height: '100%', backgroundColor: '#3b82f6', borderRadius: '9999px' }}></div>
-          </div>
-        );
-      case 'social':
-        return (
-          <div style={{ ...element.style, gap: '16px' }}>
-            {(element.content as string[]).map((network, i) => (
-              <span key={i} style={{ textTransform: 'capitalize' }}>{network}</span>
-            ))}
-          </div>
-        );
-      case 'form':
-        return (
-          <div style={element.style}>
-            <h3 style={{ fontWeight: 'bold', marginBottom: '15px' }}>{element.content.title}</h3>
-            <input type="text" placeholder="Name" style={{ width: '100%', padding: '8px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '4px' }} />
-            <input type="email" placeholder="Email" style={{ width: '100%', padding: '8px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '4px' }} />
-            <button style={{ width: '100%', padding: '10px', backgroundColor: '#3b82f6', color: 'white', borderRadius: '4px' }}>{element.content.buttonText}</button>
-          </div>
-        );
-      case 'table':
-        return (
-          <table style={{ ...element.style, borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                {(element.content.headers as string[]).map((h, i) => (
-                  <th key={i} style={{ border: '1px solid #eee', padding: '8px', backgroundColor: '#f9fafb', textAlign: 'left' }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {(element.content.rows as string[][]).map((row, i) => (
-                <tr key={i}>
-                  {row.map((cell, j) => (
-                    <td key={j} style={{ border: '1px solid #eee', padding: '8px' }}>{cell}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        );
-      case 'code':
-        return <div style={element.style} dangerouslySetInnerHTML={{ __html: element.content }} />;
-      case 'avatar':
-        return (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={element.content} alt="Avatar" style={element.style} draggable={false} />
-        );
-      case 'hero':
-        return (
-          <div style={element.style}>
-            <h1 style={{ fontSize: '36px', fontWeight: 'bold', marginBottom: '10px' }}>{element.content.title}</h1>
-            <p style={{ fontSize: '18px', marginBottom: '20px' }}>{element.content.subtitle}</p>
-            <button style={{ padding: '10px 20px', backgroundColor: '#3b82f6', color: 'white', borderRadius: '6px' }}>{element.content.buttonText}</button>
-          </div>
-        );
-      case 'stat':
-        return (
-          <div style={element.style}>
-            <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#111827' }}>{element.content.value}</div>
-            <div style={{ color: '#6b7280' }}>{element.content.label}</div>
-          </div>
-        );
-      case 'steps':
-        return (
-          <div style={element.style}>
-            {(element.content as any[]).map((s, i) => (
-              <div key={i} style={{ marginBottom: '10px' }}>
-                <strong>{i + 1}. {s.title}</strong>
-                <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>{s.description}</p>
-              </div>
-            ))}
-          </div>
-        );
-      case 'rating':
-        return (
-          <div style={element.style}>
-            {'★'.repeat(Number(element.content))}{'☆'.repeat(5 - Number(element.content))}
-          </div>
-        );
-      case 'newsletter':
-        return (
-          <div style={element.style}>
-            <h3 style={{ fontWeight: 'bold', marginBottom: '10px' }}>{element.content.title}</h3>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <input type="email" placeholder={element.content.placeholder} style={{ flex: 1, padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }} />
-              <button style={{ padding: '8px 16px', backgroundColor: '#3b82f6', color: 'white', borderRadius: '4px' }}>{element.content.buttonText}</button>
-            </div>
-          </div>
-        );
-      case 'marquee':
-        return (
-          <div style={{ ...element.style, overflow: 'hidden', whiteSpace: 'nowrap' }}>
-            <div style={{ display: 'inline-block', animation: 'marquee 10s linear infinite' }}>{element.content}</div>
-          </div>
-        );
-      case 'profile':
-        return (
-          <div style={element.style}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={element.content.avatarUrl} alt="Profile" style={{ width: '80px', height: '80px', borderRadius: '50%', margin: '0 auto 10px', objectFit: 'cover' }} draggable={false} />
-            <h3 style={{ fontWeight: 'bold', margin: 0 }}>{element.content.name}</h3>
-            <div style={{ color: '#3b82f6', fontSize: '14px', marginBottom: '10px' }}>{element.content.role}</div>
-            <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>{element.content.bio}</p>
-          </div>
-        );
-      case 'iframe':
-        return (
-          <div style={{ ...element.style, pointerEvents: 'none' }}>
-            <iframe src={element.content} style={{ width: '100%', height: '100%', border: 'none' }} title="Iframe" allowFullScreen></iframe>
-          </div>
-        );
-      case 'breadcrumbs':
-        return (
-          <div style={element.style}>
-            {(element.content as string[]).join(' / ')}
-          </div>
-        );
-      case 'tags':
-        return (
-          <div style={element.style}>
-            {(element.content as string[]).map((t, i) => (
-              <span key={i} style={{ padding: '4px 12px', backgroundColor: '#e5e7eb', borderRadius: '999px', fontSize: '12px' }}>{t}</span>
-            ))}
-          </div>
-        );
-      case 'search':
-        return <input type="text" placeholder={element.content} style={element.style} />;
-      case 'banner':
-        return (
-          <div style={element.style}>
-            {element.content.text} <a href={element.content.link} style={{ textDecoration: 'underline', marginLeft: '10px' }}>Learn more</a>
-          </div>
-        );
-      case 'footer':
-        return (
-          <div style={element.style}>
-            <div style={{ marginBottom: '10px' }}>{element.content.copyright}</div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '15px' }}>
-              {(element.content.links as string[]).map((l, i) => <a key={i} href="#" style={{ color: 'inherit' }}>{l}</a>)}
-            </div>
-          </div>
-        );
-      case 'logo':
-        return (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={element.content.url} alt={element.content.alt} style={element.style} draggable={false} />
-        );
-      case 'callout':
-        return (
-          <div style={element.style}>
-            <span style={{ fontSize: '24px' }}>{element.content.emoji}</span>
-            <div>{element.content.text}</div>
-          </div>
-        );
-      case 'checklist':
-        return (
-          <div style={element.style}>
-            {(element.content as any[]).map((c, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <input type="checkbox" checked={c.checked} readOnly />
-                <span style={{ textDecoration: c.checked ? 'line-through' : 'none', color: c.checked ? '#9ca3af' : 'inherit' }}>{c.text}</span>
-              </div>
-            ))}
-          </div>
-        );
-      case 'spinner':
-        return <div style={element.style}>{element.content}</div>;
-      case 'toggle':
-        return (
-          <div style={element.style}>
-            <input type="checkbox" checked={element.content.checked} readOnly style={{ width: '20px', height: '20px' }} />
-            <span>{element.content.label}</span>
-          </div>
-        );
-      case 'auth_form':
-        return (
-          <form style={element.style} onSubmit={(e) => e.preventDefault()}>
-            <h3 style={{ fontWeight: 'bold', marginBottom: '15px', textAlign: 'center' }}>{element.content.title}</h3>
-            <input type="email" placeholder="Email" style={{ width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ccc', borderRadius: '4px' }} disabled />
-            <input type="password" placeholder="Password" style={{ width: '100%', padding: '10px', marginBottom: '15px', border: '1px solid #ccc', borderRadius: '4px' }} disabled />
-            <button type="button" style={{ width: '100%', padding: '10px', backgroundColor: '#3b82f6', color: 'white', borderRadius: '4px', fontWeight: 'bold' }}>{element.content.buttonText}</button>
-            {element.content.mode === 'signup' && (
-              <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '12px', color: '#666' }}>
-                Already have an account? Login
-              </div>
-            )}
-            {element.content.mode === 'login' && (
-              <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '12px', color: '#666' }}>
-                Don&apos;t have an account? Sign Up
-              </div>
-            )}
-          </form>
-        );
-      case 'signature':
-        return <div style={element.style}>{element.content}</div>;
-      default:
-        return null;
-    }
-  };
-
   return (
     <motion.div
       drag
@@ -1090,8 +839,8 @@ function BuilderElement({ element, canvasRef, onSelect }: { element: PageElement
       onDragEnd={(e, info) => {
         updateElement(element.id, {
           position: {
-            x: element.position.x + info.offset.x,
-            y: element.position.y + info.offset.y,
+            x: (element.position?.x || 0) + info.offset.x,
+            y: (element.position?.y || 0) + info.offset.y,
           }
         });
       }}
@@ -1102,14 +851,14 @@ function BuilderElement({ element, canvasRef, onSelect }: { element: PageElement
       }}
       style={{
         position: 'absolute',
-        left: element.position.x,
-        top: element.position.y,
+        left: element.position?.x || 0,
+        top: element.position?.y || 0,
         x: 0,
         y: 0,
       }}
       className={`cursor-move ${isSelected ? 'ring-2 ring-blue-500 ring-offset-2' : 'hover:ring-1 hover:ring-gray-300 hover:ring-offset-1'}`}
     >
-      {renderContent()}
+      <Renderer elements={[element]} isBuilderMode={true} />
     </motion.div>
   );
 }

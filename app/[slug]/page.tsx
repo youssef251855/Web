@@ -7,8 +7,8 @@ import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { PageElement, AppVariable } from '@/lib/builder-store';
 import Renderer from '@/components/Renderer';
 
-export default function PublicSlugPage() {
-  const { username, slug } = useParams();
+export default function FlatPage() {
+  const { slug } = useParams();
   const [elements, setElements] = useState<PageElement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,21 +30,8 @@ export default function PublicSlugPage() {
   useEffect(() => {
     const fetchPage = async () => {
       try {
-        const usersRef = collection(db, 'users');
-        const qUser = query(usersRef, where('username', '==', username), limit(1));
-        const userSnap = await getDocs(qUser);
-        
-        if (userSnap.empty) {
-          setError('User not found');
-          setLoading(false);
-          return;
-        }
-        
-        const fetchedUserId = userSnap.docs[0].id;
-        setUserId(fetchedUserId);
-
         const pagesRef = collection(db, 'pages');
-        const qPage = query(pagesRef, where('userId', '==', fetchedUserId), where('slug', '==', slug), limit(1));
+        const qPage = query(pagesRef, where('slug', '==', slug), limit(1));
         const pageSnap = await getDocs(qPage);
 
         if (pageSnap.empty) {
@@ -54,6 +41,7 @@ export default function PublicSlugPage() {
         }
 
         const pageData = pageSnap.docs[0].data();
+        setUserId(pageData.userId);
         const content = JSON.parse(pageData.content);
         setElements(content.elements || []);
       } catch (err) {
@@ -64,15 +52,14 @@ export default function PublicSlugPage() {
       }
     };
 
-    if (username && slug) {
+    if (slug) {
       fetchPage();
     }
-  }, [username, slug]);
+  }, [slug]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-  if (error || !userId) return <div className="min-h-screen flex items-center justify-center text-red-500">{error || 'User ID missing'}</div>;
+  if (error || !userId) return <div className="min-h-screen flex items-center justify-center text-red-500">{error || 'Page missing'}</div>;
 
-  const renderedUsername = Array.isArray(username) ? username[0] : (username || '');
   const renderedSlug = Array.isArray(slug) ? slug[0] : (slug || '');
 
   return (
@@ -83,7 +70,6 @@ export default function PublicSlugPage() {
            variables={variables}
            setVariable={setVariable}
            userId={userId}
-           username={renderedUsername}
            slug={renderedSlug}
            isBuilderMode={false}
         />
