@@ -8,6 +8,7 @@ import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'fireb
 import { useBuilderStore, ElementType, PageElement } from '@/lib/builder-store';
 import { motion } from 'motion/react';
 import { ArrowLeft, Save, Type, Heading, Image as ImageIcon, Video, Square, Minus, CreditCard, Star, AlignJustify, List, Plus, Layout, Settings, Quote, Map, Music, AlertCircle, Tag, Send, Copy, Check, ChevronDown, DollarSign, MessageSquare, Clock, BatteryMedium, Share2, FormInput, Table as TableIcon, Code, User, LayoutTemplate, BarChart, ListOrdered, StarHalf, Mail, UserSquare, AppWindow, ChevronRight, Tags, Search, Flag, PanelBottom, Lightbulb, CheckSquare, Loader, ToggleRight, PenTool, UserPlus } from 'lucide-react';
+import CloudinaryUploadWidget from '@/components/CloudinaryUploadWidget';
 
 const SIDEBAR_ITEMS: { type: ElementType; icon: any; label: string }[] = [
   { type: 'text', icon: Type, label: 'Text' },
@@ -71,6 +72,7 @@ export default function BuilderPage() {
   const [mobileView, setMobileView] = useState<'elements' | 'canvas' | 'properties'>('canvas');
   const [userPages, setUserPages] = useState<{id: string, title: string, slug: string}[]>([]);
   const [userTables, setUserTables] = useState<{id: string, name: string, fields: any[]}[]>([]);
+  const [userSettings, setUserSettings] = useState<{cloudinaryCloudName?: string, cloudinaryUploadPreset?: string} | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -114,6 +116,11 @@ export default function BuilderPage() {
         fields: JSON.parse(d.data().fields || '[]')
       }));
       setUserTables(tables);
+
+      const settingsSnap = await getDoc(doc(db, 'user_settings', user.uid));
+      if (settingsSnap.exists()) {
+        setUserSettings(settingsSnap.data());
+      }
     };
     fetchUserPagesAndTables();
   }, [user]);
@@ -134,8 +141,15 @@ export default function BuilderPage() {
   };
 
   const getPublicUrl = () => {
-    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+    let rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
     if (rootDomain) {
+      rootDomain = rootDomain.replace(/^https?:\/\//, '');
+      
+      // Vercel and Cloud Run default domains do not support wildcard subdomains without custom domain setup
+      if (rootDomain.endsWith('.vercel.app') || rootDomain.endsWith('.run.app')) {
+        return `${typeof window !== 'undefined' ? window.location.origin : ''}/${username}/${pageSlug}`;
+      }
+      
       const protocol = rootDomain.includes('localhost') ? 'http' : 'https';
       return `${protocol}://${username}.${rootDomain}/${pageSlug}`;
     }
@@ -421,6 +435,29 @@ export default function BuilderPage() {
             className="w-full px-3 py-2 border rounded-md text-sm font-mono"
             rows={6}
           />
+        );
+      case 'image':
+      case 'video':
+        return (
+          <div className="space-y-2">
+            <input
+              type="text"
+              value={selectedElement.content as string}
+              onChange={(e) => updateElement(selectedElement.id, { content: e.target.value })}
+              className="w-full px-3 py-2 border rounded-md text-sm"
+              placeholder={`${selectedElement.type === 'image' ? 'Image' : 'Video'} URL`}
+            />
+            {selectedElement.type === 'image' && userSettings?.cloudinaryCloudName && userSettings?.cloudinaryUploadPreset && (
+              <div className="pt-2">
+                <CloudinaryUploadWidget 
+                   cloudName={userSettings.cloudinaryCloudName} 
+                   uploadPreset={userSettings.cloudinaryUploadPreset} 
+                   onSuccess={(url) => updateElement(selectedElement.id, { content: url })}
+                   className="w-full"
+                />
+              </div>
+            )}
+          </div>
         );
 
       default:
@@ -753,7 +790,10 @@ function BuilderElement({ element, canvasRef, onSelect }: { element: PageElement
       case 'heading':
         return <h2 style={{ ...element.style, fontWeight: 'bold' }}>{element.content}</h2>;
       case 'image':
-        return <img src={element.content} alt="User added" style={element.style} className="object-cover" draggable={false} />;
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={element.content} alt="User added" style={element.style} className="object-cover" draggable={false} />
+        );
       case 'video':
         return (
           <div style={{ ...element.style, pointerEvents: 'none' }}>
@@ -831,6 +871,7 @@ function BuilderElement({ element, canvasRef, onSelect }: { element: PageElement
         return (
           <div style={{ ...element.style, gap: '10px' }}>
             {(element.content as string[]).map((img, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
               <img key={i} src={img} alt={`Gallery ${i}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px' }} draggable={false} />
             ))}
           </div>
@@ -884,7 +925,10 @@ function BuilderElement({ element, canvasRef, onSelect }: { element: PageElement
       case 'code':
         return <div style={element.style} dangerouslySetInnerHTML={{ __html: element.content }} />;
       case 'avatar':
-        return <img src={element.content} alt="Avatar" style={element.style} draggable={false} />;
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={element.content} alt="Avatar" style={element.style} draggable={false} />
+        );
       case 'hero':
         return (
           <div style={element.style}>
@@ -936,6 +980,7 @@ function BuilderElement({ element, canvasRef, onSelect }: { element: PageElement
       case 'profile':
         return (
           <div style={element.style}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={element.content.avatarUrl} alt="Profile" style={{ width: '80px', height: '80px', borderRadius: '50%', margin: '0 auto 10px', objectFit: 'cover' }} draggable={false} />
             <h3 style={{ fontWeight: 'bold', margin: 0 }}>{element.content.name}</h3>
             <div style={{ color: '#3b82f6', fontSize: '14px', marginBottom: '10px' }}>{element.content.role}</div>
@@ -980,7 +1025,10 @@ function BuilderElement({ element, canvasRef, onSelect }: { element: PageElement
           </div>
         );
       case 'logo':
-        return <img src={element.content.url} alt={element.content.alt} style={element.style} draggable={false} />;
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={element.content.url} alt={element.content.alt} style={element.style} draggable={false} />
+        );
       case 'callout':
         return (
           <div style={element.style}>

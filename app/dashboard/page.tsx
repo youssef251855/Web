@@ -6,7 +6,7 @@ import { useAuth } from '@/lib/auth-context';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import { Plus, Edit, ExternalLink, Layout as LayoutIcon } from 'lucide-react';
+import { Plus, Edit, ExternalLink, Layout as LayoutIcon, MessageSquare, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 
 interface Page {
@@ -25,6 +25,7 @@ export default function Dashboard() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newPageTitle, setNewPageTitle] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState('blank');
 
   useEffect(() => {
     const fetchPages = async () => {
@@ -56,12 +57,25 @@ export default function Dashboard() {
     setIsCreating(true);
     const slug = newPageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     
+    let initialElements: any[] = [];
+    if (selectedTemplate === 'chat') {
+      initialElements = [
+        { id: Date.now().toString(), type: 'heading', content: 'Customer Support Chat', style: { textAlign: 'center', color: '#1f2937', padding: '20px 0' } },
+        { id: (Date.now() + 1).toString(), type: 'form', content: { title: 'Message Us', buttonText: 'Send Message' }, style: { width: '400px', margin: '0 auto', backgroundColor: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' } }
+      ];
+    } else if (selectedTemplate === 'store') {
+      initialElements = [
+        { id: Date.now().toString(), type: 'hero', content: { title: 'Welcome to Our Store', subtitle: 'Browse our latest products below.', buttonText: 'Shop Now' }, style: { backgroundColor: '#f3f4f6', padding: '60px 20px', textAlign: 'center' } },
+        { id: (Date.now() + 1).toString(), type: 'gallery', content: ['https://picsum.photos/seed/store1/400/300', 'https://picsum.photos/seed/store2/400/300', 'https://picsum.photos/seed/store3/400/300'], style: { display: 'flex', gap: '20px', padding: '40px 20px', justifyContent: 'center' } }
+      ];
+    }
+
     try {
       const docRef = await addDoc(collection(db, 'pages'), {
         userId: user.uid,
         title: newPageTitle,
         slug,
-        content: JSON.stringify({ elements: [] }),
+        content: JSON.stringify({ elements: initialElements }),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -81,12 +95,19 @@ export default function Dashboard() {
   };
 
   const getPublicUrl = (slug: string) => {
-    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+    let rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
     if (rootDomain) {
+      rootDomain = rootDomain.replace(/^https?:\/\//, '');
+      
+      // Vercel and Cloud Run default domains do not support wildcard subdomains without custom domain setup
+      if (rootDomain.endsWith('.vercel.app') || rootDomain.endsWith('.run.app')) {
+        return `${typeof window !== 'undefined' ? window.location.origin : ''}/${username}/${slug}`;
+      }
+      
       const protocol = rootDomain.includes('localhost') ? 'http' : 'https';
       return `${protocol}://${username}.${rootDomain}/${slug}`;
     }
-    return `/${username}/${slug}`;
+    return `${typeof window !== 'undefined' ? window.location.origin : ''}/${username}/${slug}`;
   };
 
   if (!username && user) {
@@ -179,9 +200,12 @@ export default function Dashboard() {
       {/* Create Page Modal */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100 opacity-100">
-            <div className="px-6 py-5 border-b bg-gray-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden transform transition-all scale-100 opacity-100">
+            <div className="px-6 py-5 border-b bg-gray-50 flex justify-between items-center">
               <h3 className="text-lg font-semibold text-gray-800">Create New Page</h3>
+              <button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                &times;
+              </button>
             </div>
             <form onSubmit={handleCreatePage} className="p-6">
               <div className="mb-6">
@@ -196,7 +220,61 @@ export default function Dashboard() {
                   autoFocus
                 />
               </div>
-              <div className="flex justify-end space-x-3">
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">Choose a Template</label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Blank Template */}
+                  <div 
+                    onClick={() => setSelectedTemplate('blank')}
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition relative ${selectedTemplate === 'blank' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                  >
+                    {selectedTemplate === 'blank' && (
+                      <div className="absolute top-2 right-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      </div>
+                    )}
+                    <div className={`h-24 border rounded mb-3 flex items-center justify-center ${selectedTemplate === 'blank' ? 'bg-white text-blue-500' : 'bg-gray-50 text-gray-400'}`}>
+                      <LayoutIcon className="w-8 h-8" />
+                    </div>
+                    <span className={`block font-medium text-center text-sm ${selectedTemplate === 'blank' ? 'text-blue-900' : 'text-gray-700'}`}>Blank Page</span>
+                  </div>
+
+                  {/* Chat Template Placeholder */}
+                  <div 
+                    onClick={() => setSelectedTemplate('chat')}
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition relative ${selectedTemplate === 'chat' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                  >
+                    {selectedTemplate === 'chat' && (
+                      <div className="absolute top-2 right-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      </div>
+                    )}
+                    <div className={`h-24 border rounded mb-3 flex items-center justify-center ${selectedTemplate === 'chat' ? 'bg-white text-blue-500' : 'bg-gray-50 text-gray-400'}`}>
+                      <MessageSquare className="w-8 h-8" />
+                    </div>
+                    <span className={`block font-medium text-center text-sm ${selectedTemplate === 'chat' ? 'text-blue-900' : 'text-gray-700'}`}>Chat App</span>
+                  </div>
+
+                  {/* E-commerce Template Placeholder */}
+                  <div 
+                    onClick={() => setSelectedTemplate('store')}
+                    className={`border-2 rounded-lg p-4 cursor-pointer transition relative ${selectedTemplate === 'store' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
+                  >
+                    {selectedTemplate === 'store' && (
+                      <div className="absolute top-2 right-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      </div>
+                    )}
+                    <div className={`h-24 border rounded mb-3 flex items-center justify-center ${selectedTemplate === 'store' ? 'bg-white text-blue-500' : 'bg-gray-50 text-gray-400'}`}>
+                      <CreditCard className="w-8 h-8" />
+                    </div>
+                    <span className={`block font-medium text-center text-sm ${selectedTemplate === 'store' ? 'text-blue-900' : 'text-gray-700'}`}>Store Front</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}

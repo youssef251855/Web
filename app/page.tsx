@@ -23,7 +23,7 @@ export default function Home() {
       <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">Joex</h1>
         <p className="text-gray-600 mb-8">
-          The easiest way to build and publish your own mini website using drag and drop.
+          The easiest way to build and publish your own website. A powerful builder designed for small, medium, and large websites.
         </p>
         <button
           onClick={signIn}

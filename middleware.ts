@@ -20,12 +20,15 @@ export default function middleware(req: NextRequest) {
 
   // Get the root domain from environment variables
   // Example: "mywebsite.com" or "localhost:3000"
-  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  let rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
 
   // If no root domain is configured, proceed with normal path-based routing
   if (!rootDomain) {
     return NextResponse.next();
   }
+
+  // Remove potential http/https prefixes from rootDomain
+  rootDomain = rootDomain.replace(/^https?:\/\//, '');
 
   // Extract the subdomain
   // Example: "john.mywebsite.com" -> "john"

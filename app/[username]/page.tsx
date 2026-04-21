@@ -79,7 +79,10 @@ function RenderElement({ element, username }: { element: PageElement, username: 
       case 'heading':
         return <h2 style={{ ...element.style, fontWeight: 'bold' }}>{element.content}</h2>;
       case 'image':
-        return <img src={element.content} alt="User added" style={element.style} className="object-cover" />;
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={element.content} alt="User added" style={element.style} className="object-cover" />
+        );
       case 'video':
         return (
           <div style={element.style}>
@@ -164,6 +167,7 @@ function RenderElement({ element, username }: { element: PageElement, username: 
         return (
           <div style={{ ...element.style, gap: '10px', flexWrap: 'wrap' }}>
             {(element.content as string[]).map((img, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
               <img key={i} src={img} alt={`Gallery ${i}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px' }} loading="lazy" />
             ))}
           </div>
@@ -217,7 +221,10 @@ function RenderElement({ element, username }: { element: PageElement, username: 
       case 'code':
         return <div style={element.style} dangerouslySetInnerHTML={{ __html: element.content }} />;
       case 'avatar':
-        return <img src={element.content} alt="Avatar" style={element.style} draggable={false} />;
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={element.content} alt="Avatar" style={element.style} draggable={false} />
+        );
       case 'hero':
         return (
           <div style={element.style}>
@@ -269,6 +276,7 @@ function RenderElement({ element, username }: { element: PageElement, username: 
       case 'profile':
         return (
           <div style={element.style}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={element.content.avatarUrl} alt="Profile" style={{ width: '80px', height: '80px', borderRadius: '50%', margin: '0 auto 10px', objectFit: 'cover' }} draggable={false} />
             <h3 style={{ fontWeight: 'bold', margin: 0 }}>{element.content.name}</h3>
             <div style={{ color: '#3b82f6', fontSize: '14px', marginBottom: '10px' }}>{element.content.role}</div>
@@ -313,7 +321,10 @@ function RenderElement({ element, username }: { element: PageElement, username: 
           </div>
         );
       case 'logo':
-        return <img src={element.content.url} alt={element.content.alt} style={element.style} draggable={false} />;
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={element.content.url} alt={element.content.alt} style={element.style} draggable={false} />
+        );
       case 'callout':
         return (
           <div style={element.style}>

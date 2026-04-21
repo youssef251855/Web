@@ -178,7 +178,10 @@ function RenderElement({ element, username, userId }: { element: PageElement, us
       case 'heading':
         return <h2 style={{ ...element.style, fontWeight: 'bold' }}>{element.content}</h2>;
       case 'image':
-        return <img src={element.content} alt="User added" style={element.style} className="object-cover" />;
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={element.content} alt="User added" style={element.style} className="object-cover" />
+        );
       case 'video':
         return (
           <div style={element.style}>
@@ -191,7 +194,23 @@ function RenderElement({ element, username, userId }: { element: PageElement, us
           if (element.action.type === 'url' && element.action.value) {
             window.open(element.action.value, '_blank');
           } else if (element.action.type === 'page' && element.action.value) {
-            window.location.href = `/${username}/${element.action.value}`;
+            let rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || '';
+            if (rootDomain) {
+              rootDomain = rootDomain.replace(/^https?:\/\//, '');
+              if (rootDomain.endsWith('.vercel.app') || rootDomain.endsWith('.run.app')) {
+                window.location.href = `/${username}/${element.action.value}`;
+              } else {
+                // If it's a true wildcard subdomain
+                const hostname = typeof window !== 'undefined' ? window.location.hostname : '';
+                if (hostname.includes(username as string)) {
+                  window.location.href = `/${element.action.value}`;
+                } else {
+                  window.location.href = `/${username}/${element.action.value}`;
+                }
+              }
+            } else {
+              window.location.href = `/${username}/${element.action.value}`;
+            }
           }
         };
         return <button style={element.style} onClick={handleClick}>{element.content}</button>;
@@ -272,6 +291,7 @@ function RenderElement({ element, username, userId }: { element: PageElement, us
         return (
           <div style={{ ...element.style, gap: '10px', flexWrap: 'wrap' }}>
             {(element.content as string[]).map((img, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
               <img key={i} src={img} alt={`Gallery ${i}`} style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '4px' }} loading="lazy" />
             ))}
           </div>
@@ -332,7 +352,10 @@ function RenderElement({ element, username, userId }: { element: PageElement, us
       case 'code':
         return <div style={element.style} dangerouslySetInnerHTML={{ __html: element.content }} />;
       case 'avatar':
-        return <img src={element.content} alt="Avatar" style={element.style} draggable={false} />;
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={element.content} alt="Avatar" style={element.style} draggable={false} />
+        );
       case 'hero':
         return (
           <div style={element.style}>
@@ -384,6 +407,7 @@ function RenderElement({ element, username, userId }: { element: PageElement, us
       case 'profile':
         return (
           <div style={element.style}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={element.content.avatarUrl} alt="Profile" style={{ width: '80px', height: '80px', borderRadius: '50%', margin: '0 auto 10px', objectFit: 'cover' }} draggable={false} />
             <h3 style={{ fontWeight: 'bold', margin: 0 }}>{element.content.name}</h3>
             <div style={{ color: '#3b82f6', fontSize: '14px', marginBottom: '10px' }}>{element.content.role}</div>
@@ -428,7 +452,10 @@ function RenderElement({ element, username, userId }: { element: PageElement, us
           </div>
         );
       case 'logo':
-        return <img src={element.content.url} alt={element.content.alt} style={element.style} draggable={false} />;
+        return (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={element.content.url} alt={element.content.alt} style={element.style} draggable={false} />
+        );
       case 'callout':
         return (
           <div style={element.style}>

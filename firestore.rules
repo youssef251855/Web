@@ -138,5 +138,10 @@ service cloud.firestore {
       allow update: if isDocOwner(); // owner of the site can update
       allow delete: if isDocOwner();
     }
+
+    match /user_settings/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId);
+    }
   }
 }
