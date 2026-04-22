@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
 
-export type ElementType = 'text' | 'heading' | 'image' | 'video' | 'button' | 'divider' | 'card' | 'icon' | 'spacer' | 'list' | 'quote' | 'badge' | 'map' | 'audio' | 'alert' | 'accordion' | 'pricing' | 'testimonial' | 'gallery' | 'countdown' | 'progress' | 'social' | 'form' | 'table' | 'code' | 'avatar' | 'hero' | 'stat' | 'steps' | 'rating' | 'newsletter' | 'marquee' | 'profile' | 'iframe' | 'breadcrumbs' | 'tags' | 'search' | 'banner' | 'footer' | 'logo' | 'callout' | 'checklist' | 'spinner' | 'toggle' | 'signature' | 'auth_form';
+export type ElementType = 'text' | 'heading' | 'image' | 'video' | 'button' | 'divider' | 'card' | 'icon' | 'spacer' | 'list' | 'quote' | 'badge' | 'map' | 'audio' | 'alert' | 'accordion' | 'pricing' | 'testimonial' | 'gallery' | 'countdown' | 'progress' | 'social' | 'form' | 'table' | 'code' | 'avatar' | 'hero' | 'stat' | 'steps' | 'rating' | 'newsletter' | 'marquee' | 'profile' | 'iframe' | 'breadcrumbs' | 'tags' | 'search' | 'banner' | 'footer' | 'logo' | 'callout' | 'checklist' | 'spinner' | 'toggle' | 'signature' | 'auth_form' | 'loading_screen';
 
 export interface Position {
   x: number;
@@ -166,6 +166,7 @@ const defaultContent: Record<ElementType, any> = {
   toggle: { label: 'Enable notifications', checked: true },
   signature: 'John Doe',
   auth_form: { title: 'Sign Up', mode: 'signup', buttonText: 'Create Account' },
+  loading_screen: { message: 'Loading...', showSpinner: true },
 };
 
 const defaultStyle: Record<ElementType, ElementStyle> = {
@@ -215,6 +216,7 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
   toggle: { display: 'flex', alignItems: 'center', gap: '12px' },
   signature: { fontFamily: 'cursive', fontSize: '32px', color: '#111827' },
   auth_form: { width: '350px', padding: '24px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid #e5e7eb' },
+  loading_screen: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100vw', height: '100vh', backgroundColor: '#ffffff', position: 'fixed', top: '0', left: '0', zIndex: '9999' },
 };
 
 export const useBuilderStore = create<BuilderState>((set) => ({
@@ -233,7 +235,9 @@ export const useBuilderStore = create<BuilderState>((set) => ({
         content: defaultContent[type],
         style: { ...defaultStyle[type] },
         position,
-        events: type === 'button' ? [{ id: uuidv4(), trigger: 'onClick', actions: [] }] : [],
+        events: type === 'button' ? [{ id: uuidv4(), trigger: 'onClick', actions: [] }] 
+              : type === 'loading_screen' ? [{ id: uuidv4(), trigger: 'onLoad', actions: [{ id: uuidv4(), type: 'logic_delay', params: { ms: 2000 } }, { id: uuidv4(), type: 'navigate_url', params: { url: '/' } }] }]
+              : [],
       },
     ],
   })),

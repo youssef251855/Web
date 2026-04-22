@@ -63,8 +63,8 @@ export const executeWorkflow = async (
       switch (step.type) {
         case 'navigate_page':
           const targetPage = step.params.pageSlug;
-          if (targetPage && context.username) {
-            window.location.href = `/${context.username}/${targetPage}`;
+          if (targetPage) {
+            window.location.href = `/${targetPage}`;
           }
           break;
         case 'navigate_url':

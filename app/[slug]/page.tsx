@@ -44,6 +44,18 @@ export default function FlatPage() {
         setUserId(pageData.userId);
         const content = JSON.parse(pageData.content);
         setElements(content.elements || []);
+        
+        // Update document title and meta description dynamically
+        if (pageData.title) document.title = pageData.title;
+        if (pageData.description) {
+          let metaDesc = document.querySelector('meta[name="description"]');
+          if (!metaDesc) {
+            metaDesc = document.createElement('meta');
+            metaDesc.setAttribute('name', 'description');
+            document.head.appendChild(metaDesc);
+          }
+          metaDesc.setAttribute('content', pageData.description);
+        }
       } catch (err) {
         console.error(err);
         setError('Failed to load page');

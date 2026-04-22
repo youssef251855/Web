@@ -12,53 +12,82 @@ import CloudinaryUploadWidget from '@/components/CloudinaryUploadWidget';
 import ActionEditor from '@/components/ActionEditor';
 import Renderer from '@/components/Renderer';
 
-const SIDEBAR_ITEMS: { type: ElementType; icon: any; label: string }[] = [
-  { type: 'text', icon: Type, label: 'Text' },
-  { type: 'heading', icon: Heading, label: 'Heading' },
-  { type: 'image', icon: ImageIcon, label: 'Image' },
-  { type: 'video', icon: Video, label: 'Video' },
-  { type: 'button', icon: Square, label: 'Button' },
-  { type: 'divider', icon: Minus, label: 'Divider' },
-  { type: 'card', icon: CreditCard, label: 'Card' },
-  { type: 'icon', icon: Star, label: 'Icon' },
-  { type: 'spacer', icon: AlignJustify, label: 'Spacer' },
-  { type: 'list', icon: List, label: 'List' },
-  { type: 'quote', icon: Quote, label: 'Quote' },
-  { type: 'badge', icon: Tag, label: 'Badge' },
-  { type: 'map', icon: Map, label: 'Map' },
-  { type: 'audio', icon: Music, label: 'Audio' },
-  { type: 'alert', icon: AlertCircle, label: 'Alert' },
-  { type: 'accordion', icon: ChevronDown, label: 'Accordion' },
-  { type: 'pricing', icon: DollarSign, label: 'Pricing' },
-  { type: 'testimonial', icon: MessageSquare, label: 'Testimonial' },
-  { type: 'gallery', icon: ImageIcon, label: 'Gallery' },
-  { type: 'countdown', icon: Clock, label: 'Countdown' },
-  { type: 'progress', icon: BatteryMedium, label: 'Progress' },
-  { type: 'social', icon: Share2, label: 'Social' },
-  { type: 'form', icon: FormInput, label: 'Form' },
-  { type: 'table', icon: TableIcon, label: 'Table' },
-  { type: 'code', icon: Code, label: 'HTML Code' },
-  { type: 'avatar', icon: User, label: 'Avatar' },
-  { type: 'hero', icon: LayoutTemplate, label: 'Hero' },
-  { type: 'stat', icon: BarChart, label: 'Stat' },
-  { type: 'steps', icon: ListOrdered, label: 'Steps' },
-  { type: 'rating', icon: StarHalf, label: 'Rating' },
-  { type: 'newsletter', icon: Mail, label: 'Newsletter' },
-  { type: 'marquee', icon: Type, label: 'Marquee' },
-  { type: 'profile', icon: UserSquare, label: 'Profile' },
-  { type: 'iframe', icon: AppWindow, label: 'Iframe' },
-  { type: 'breadcrumbs', icon: ChevronRight, label: 'Breadcrumbs' },
-  { type: 'tags', icon: Tags, label: 'Tags' },
-  { type: 'search', icon: Search, label: 'Search' },
-  { type: 'banner', icon: Flag, label: 'Banner' },
-  { type: 'footer', icon: PanelBottom, label: 'Footer' },
-  { type: 'logo', icon: ImageIcon, label: 'Logo' },
-  { type: 'callout', icon: Lightbulb, label: 'Callout' },
-  { type: 'checklist', icon: CheckSquare, label: 'Checklist' },
-  { type: 'spinner', icon: Loader, label: 'Spinner' },
-  { type: 'toggle', icon: ToggleRight, label: 'Toggle' },
-  { type: 'signature', icon: PenTool, label: 'Signature' },
-  { type: 'auth_form', icon: UserPlus, label: 'Sign Up / Login' },
+const SIDEBAR_CATEGORIES = [
+  {
+    name: 'Layout & Basic',
+    items: [
+      { type: 'text', icon: Type, label: 'Text' },
+      { type: 'heading', icon: Heading, label: 'Heading' },
+      { type: 'spacer', icon: AlignJustify, label: 'Spacer' },
+      { type: 'divider', icon: Minus, label: 'Divider' },
+      { type: 'image', icon: ImageIcon, label: 'Image' },
+      { type: 'video', icon: Video, label: 'Video' },
+      { type: 'button', icon: Square, label: 'Button' },
+      { type: 'card', icon: CreditCard, label: 'Card' },
+      { type: 'icon', icon: Star, label: 'Icon' },
+      { type: 'logo', icon: ImageIcon, label: 'Logo' },
+    ] as { type: ElementType; icon: any; label: string }[]
+  },
+  {
+    name: 'Lists & Data',
+    items: [
+      { type: 'list', icon: List, label: 'List' },
+      { type: 'table', icon: TableIcon, label: 'Table' },
+      { type: 'badge', icon: Tag, label: 'Badge' },
+      { type: 'accordion', icon: ChevronDown, label: 'Accordion' },
+      { type: 'progress', icon: BatteryMedium, label: 'Progress' },
+      { type: 'stat', icon: BarChart, label: 'Stat' },
+      { type: 'checklist', icon: CheckSquare, label: 'Checklist' },
+    ] as { type: ElementType; icon: any; label: string }[]
+  },
+  {
+    name: 'Marketing',
+    items: [
+      { type: 'hero', icon: LayoutTemplate, label: 'Hero' },
+      { type: 'pricing', icon: DollarSign, label: 'Pricing' },
+      { type: 'testimonial', icon: MessageSquare, label: 'Testimonial' },
+      { type: 'newsletter', icon: Mail, label: 'Newsletter' },
+      { type: 'banner', icon: Flag, label: 'Banner' },
+      { type: 'callout', icon: Lightbulb, label: 'Callout' },
+      { type: 'marquee', icon: Type, label: 'Marquee' },
+      { type: 'quote', icon: Quote, label: 'Quote' },
+    ] as { type: ElementType; icon: any; label: string }[]
+  },
+  {
+    name: 'Components',
+    items: [
+      { type: 'gallery', icon: ImageIcon, label: 'Gallery' },
+      { type: 'countdown', icon: Clock, label: 'Countdown' },
+      { type: 'map', icon: Map, label: 'Map' },
+      { type: 'audio', icon: Music, label: 'Audio' },
+      { type: 'avatar', icon: User, label: 'Avatar' },
+      { type: 'steps', icon: ListOrdered, label: 'Steps' },
+      { type: 'rating', icon: StarHalf, label: 'Rating' },
+      { type: 'profile', icon: UserSquare, label: 'Profile' },
+      { type: 'search', icon: Search, label: 'Search' },
+      { type: 'social', icon: Share2, label: 'Social' },
+    ] as { type: ElementType; icon: any; label: string }[]
+  },
+  {
+    name: 'Forms & Auth',
+    items: [
+      { type: 'form', icon: FormInput, label: 'Form' },
+      { type: 'auth_form', icon: UserPlus, label: 'Sign Up / Login' },
+      { type: 'toggle', icon: ToggleRight, label: 'Toggle' },
+      { type: 'signature', icon: PenTool, label: 'Signature' },
+    ] as { type: ElementType; icon: any; label: string }[]
+  },
+  {
+    name: 'Structure & Misc',
+    items: [
+      { type: 'footer', icon: PanelBottom, label: 'Footer' },
+      { type: 'breadcrumbs', icon: ChevronRight, label: 'Breadcrumbs' },
+      { type: 'iframe', icon: AppWindow, label: 'Iframe' },
+      { type: 'code', icon: Code, label: 'Code' },
+      { type: 'spinner', icon: Loader, label: 'Spinner' },
+      { type: 'tags', icon: Tags, label: 'Tags' },
+    ] as { type: ElementType; icon: any; label: string }[]
+  }
 ];
 
 export default function BuilderPage() {
@@ -68,9 +97,11 @@ export default function BuilderPage() {
   const { elements, setElements, variables, setVariables, addElement, updateElement, removeElement, selectedElementId, selectElement } = useBuilderStore();
   const [pageTitle, setPageTitle] = useState('');
   const [pageSlug, setPageSlug] = useState('');
+  const [pageDescription, setPageDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [topTab, setTopTab] = useState<'editor' | 'database' | 'users' | 'settings'>('editor');
   const [mobileView, setMobileView] = useState<'elements' | 'canvas' | 'properties'>('canvas');
   const [leftTab, setLeftTab] = useState<'elements' | 'variables'>('elements');
   const [userPages, setUserPages] = useState<{id: string, title: string, slug: string}[]>([]);
@@ -93,6 +124,7 @@ export default function BuilderPage() {
       if (docSnap.exists() && docSnap.data().userId === user.uid) {
         setPageTitle(docSnap.data().title);
         setPageSlug(docSnap.data().slug);
+        setPageDescription(docSnap.data().description || '');
         const content = JSON.parse(docSnap.data().content);
         setElements(content.elements || []);
         setVariables(content.variables || []);
@@ -134,6 +166,9 @@ export default function BuilderPage() {
     setSaving(true);
     try {
       await updateDoc(doc(db, 'pages', id as string), {
+        title: pageTitle,
+        slug: pageSlug,
+        description: pageDescription,
         content: JSON.stringify({ elements, variables }),
         updatedAt: new Date(),
       });
@@ -481,17 +516,25 @@ export default function BuilderPage() {
   return (
     <div className="h-screen flex flex-col bg-gray-100 overflow-hidden">
       {/* Topbar */}
-      <header className="h-14 bg-white border-b flex items-center justify-between px-4 shrink-0">
+      <header className="h-14 bg-white border-b flex items-center justify-between px-4 shrink-0 overflow-x-auto">
         <div className="flex items-center">
           <button onClick={() => router.push('/dashboard')} className="p-2 hover:bg-gray-100 rounded-md mr-2">
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
-          <h1 className="font-semibold text-gray-800">{pageTitle}</h1>
+          <h1 className="font-semibold text-gray-800 hidden sm:block whitespace-nowrap">{pageTitle}</h1>
         </div>
-        <div className="flex items-center space-x-2">
+        
+        <div className="flex items-center space-x-1 mx-4">
+          <button onClick={() => setTopTab('editor')} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${topTab === 'editor' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}>Editor</button>
+          <button onClick={() => setTopTab('database')} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${topTab === 'database' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}>Database</button>
+          <button onClick={() => setTopTab('users')} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${topTab === 'users' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}>Users</button>
+          <button onClick={() => setTopTab('settings')} className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${topTab === 'settings' ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'}`}>Settings</button>
+        </div>
+
+        <div className="flex items-center space-x-2 shrink-0">
           <button
             onClick={() => window.open(getPublicUrl(), '_blank')}
-            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md flex items-center text-sm hover:bg-gray-200 transition"
+            className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md flex items-center text-sm hover:bg-gray-200 transition"
           >
             Preview
           </button>
@@ -512,9 +555,11 @@ export default function BuilderPage() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Sidebar */}
-        <aside className={`${mobileView === 'elements' ? 'flex' : 'hidden'} md:flex absolute md:relative z-10 w-full md:w-64 h-full bg-white border-r flex-col shrink-0 overflow-hidden`}>
+      {topTab === 'editor' && (
+        <>
+          <div className="flex flex-1 overflow-hidden relative">
+            {/* Sidebar */}
+            <aside className={`${mobileView === 'elements' ? 'flex' : 'hidden'} md:flex absolute md:relative z-10 w-full md:w-64 h-full bg-white border-r flex-col shrink-0 overflow-hidden`}>
           <div className="flex border-b shrink-0">
             <button onClick={() => setLeftTab('elements')} className={`flex-1 py-3 text-sm font-semibold uppercase tracking-wider ${leftTab === 'elements' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}>Elements</button>
             <button onClick={() => setLeftTab('variables')} className={`flex-1 py-3 text-sm font-semibold uppercase tracking-wider ${leftTab === 'variables' ? 'border-b-2 border-blue-500 text-blue-600' : 'text-gray-500'}`}>Variables</button>
@@ -522,16 +567,23 @@ export default function BuilderPage() {
           
           <div className="flex-1 overflow-y-auto hidden-scrollbar">
             {leftTab === 'elements' && (
-              <div className="p-4 grid grid-cols-2 gap-3">
-                {SIDEBAR_ITEMS.map((item) => (
-                  <button
-                    key={item.type}
-                    onClick={() => handleAddElement(item.type)}
-                    className="flex flex-col items-center justify-center p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-200 transition bg-gray-50"
-                  >
-                    <item.icon className="w-6 h-6 text-gray-600 mb-2" />
-                    <span className="text-xs text-gray-700">{item.label}</span>
-                  </button>
+              <div className="p-4 space-y-6">
+                {SIDEBAR_CATEGORIES.map((category) => (
+                  <div key={category.name}>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">{category.name}</h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {category.items.map((item) => (
+                        <button
+                          key={item.type}
+                          onClick={() => handleAddElement(item.type)}
+                          className="flex flex-col items-center justify-center p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-200 transition bg-gray-50"
+                        >
+                          <item.icon className="w-6 h-6 text-gray-600 mb-2" />
+                          <span className="text-xs text-gray-700">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
@@ -778,6 +830,82 @@ export default function BuilderPage() {
           <span className="text-[10px] mt-1">Edit</span>
         </button>
       </div>
+      </>
+      )}
+
+      {topTab === 'settings' && (
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50">
+          <div className="max-w-2xl mx-auto bg-white p-6 rounded-lg shadow-sm border">
+            <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center"><Settings className="w-6 h-6 mr-2 text-gray-400" /> Site Settings & SEO</h2>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Page Title <span className="text-xs text-gray-500 font-normal">(Used for Browser Tab & SEO)</span></label>
+                <input
+                  type="text"
+                  value={pageTitle}
+                  onChange={(e) => setPageTitle(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-md outline-none focus:border-blue-500"
+                  placeholder="e.g. My Awesome Site"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">URL Slug <span className="text-xs text-gray-500 font-normal">(e.g., your-site-name)</span></label>
+                <div className="flex items-center">
+                  <span className="px-3 py-2 bg-gray-100 border border-r-0 rounded-l-md text-gray-500 text-sm whitespace-nowrap">
+                    joe-web-builder.vercel.app/
+                  </span>
+                  <input
+                    type="text"
+                    value={pageSlug}
+                    onChange={(e) => setPageSlug(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                    className="w-full px-4 py-2 border rounded-r-md outline-none focus:border-blue-500"
+                    placeholder="my-site"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Page Description <span className="text-xs text-gray-500 font-normal">(Used for Search Engine Snippets)</span></label>
+                <textarea
+                  value={pageDescription}
+                  onChange={(e) => setPageDescription(e.target.value)}
+                  className="w-full px-4 py-2 border rounded-md outline-none focus:border-blue-500"
+                  placeholder="A brief description of this page..."
+                  rows={3}
+                />
+              </div>
+              
+              <div className="pt-4 border-t">
+                <button 
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save Settings'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {topTab === 'database' && (
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-white flex flex-col items-center justify-center">
+           <TableIcon className="w-16 h-16 text-gray-300 mb-4" />
+           <h2 className="text-xl font-bold text-gray-700 mb-2">Database Connection</h2>
+           <p className="text-gray-500 text-center max-w-sm mb-6">Manage data mapped to your Dynamic Lists and Forms.</p>
+           <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-blue-600 text-white rounded-md">Go to Database Dashboard</button>
+        </div>
+      )}
+
+      {topTab === 'users' && (
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-white flex flex-col items-center justify-center">
+           <UserPlus className="w-16 h-16 text-gray-300 mb-4" />
+           <h2 className="text-xl font-bold text-gray-700 mb-2">User Management</h2>
+           <p className="text-gray-500 text-center max-w-sm mb-6">View and manage users who signed up through your site's Auth forms.</p>
+           <button onClick={() => router.push('/dashboard')} className="px-4 py-2 bg-blue-600 text-white rounded-md">Manage Users</button>
+        </div>
+      )}
 
       {/* Publish Modal */}
       {showPublishModal && (

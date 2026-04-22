@@ -58,6 +58,22 @@ export default function Renderer({
     }
   }, [elements, userId, isBuilderMode]);
 
+  const triggeredRefs = React.useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    // Execute onLoad events for any components that have them
+    if (isBuilderMode) return;
+    elements.forEach(el => {
+      if (!triggeredRefs.current.has(el.id)) {
+        const hasOnLoad = el.events?.find(e => e.trigger === 'onLoad');
+        if (hasOnLoad) {
+          triggeredRefs.current.add(el.id);
+          executeElementEvents(el, 'onLoad');
+        }
+      }
+    });
+  }, [elements, isBuilderMode, variables, userId, slug, username]);
+
   const executeElementEvents = async (element: PageElement, trigger: string) => {
     if (isBuilderMode || !element.events) return;
     const ev = element.events.find(e => e.trigger === trigger);
@@ -257,6 +273,15 @@ export default function Renderer({
           </table>
         );
       case 'code': return <div id={element.customId} style={elStyle} className={customClass} dangerouslySetInnerHTML={{ __html: element.content }} />;
+      case 'loading_screen':
+        return (
+          <div id={element.customId} style={elStyle} className={customClass}>
+            {element.content?.showSpinner && (
+              <div className="animate-spin rounded-full border-4 border-gray-300 border-t-blue-600 w-16 h-16 mb-4"></div>
+            )}
+            <h1 className="text-2xl font-bold text-gray-800">{replaceVariablesInText(element.content?.message || 'Loading...')}</h1>
+          </div>
+        );
       default:
         // Basic fallback for simple text/html replacements not explicitly covered above
         if (element.content && typeof element.content === 'object' && 'text' in element.content) {
