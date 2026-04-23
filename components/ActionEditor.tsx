@@ -21,40 +21,58 @@ const ACTION_GROUPS: { group: string, icon: any, types: ActionType[] }[] = [
 ];
 
 export default function ActionEditor({ element, updateElement, userPages }: ActionEditorProps) {
-  // Ensure element has an onClick event array
   const events = element.events || [];
-  const onClickEvent = events.find(e => e.trigger === 'onClick') || { id: uuidv4(), trigger: 'onClick', actions: [] };
   
+  // Decide which trigger we are currently editing.
+  // Defaults to 'onClick', but for forms it might make sense to default to 'onSubmit',
+  // and for loading screens 'onLoad'
+  const defaultTrigger = element.type === 'form' || element.type === 'auth_form' ? 'onSubmit' : element.type === 'loading_screen' ? 'onLoad' : 'onClick';
+  
+  const [activeTrigger, setActiveTrigger] = React.useState<string>(defaultTrigger);
+  const currentEvent = events.find(e => e.trigger === activeTrigger) || { id: uuidv4(), trigger: activeTrigger, actions: [] };
+
   const addAction = (type: ActionType) => {
-    const newActions = [...onClickEvent.actions, { id: uuidv4(), type, params: {} }];
+    const newActions = [...currentEvent.actions, { id: uuidv4(), type, params: {} }];
     updateElementEvents(newActions);
   };
 
   const removeAction = (index: number) => {
-    const newActions = [...onClickEvent.actions];
+    const newActions = [...currentEvent.actions];
     newActions.splice(index, 1);
     updateElementEvents(newActions);
   };
 
   const updateActionParam = (idx: number, key: string, value: any) => {
-    const newActions = [...onClickEvent.actions];
+    const newActions = [...currentEvent.actions];
     newActions[idx].params[key] = value;
     updateElementEvents(newActions);
   };
 
   const updateElementEvents = (newActions: ActionStep[]) => {
-    const updatedEvent = { ...onClickEvent, actions: newActions };
-    const filteredEvents = events.filter(e => e.trigger !== 'onClick');
+    const updatedEvent = { ...currentEvent, actions: newActions };
+    const filteredEvents = events.filter(e => e.trigger !== activeTrigger);
     updateElement(element.id, { events: [...filteredEvents, updatedEvent] });
   };
 
   return (
     <div className="space-y-4 mt-4 border-t pt-4">
-      <h3 className="text-sm font-medium text-gray-900 border-b pb-2">Workflows (onClick)</h3>
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-sm font-medium text-gray-900 border-b pb-2">Workflows</h3>
+        <select 
+          value={activeTrigger} 
+          onChange={(e) => setActiveTrigger(e.target.value)}
+          className="text-xs border rounded px-2 py-1 bg-gray-50"
+        >
+          <option value="onClick">onClick</option>
+          <option value="onLoad">onLoad</option>
+          <option value="onSubmit">onSubmit</option>
+          <option value="onHover">onHover</option>
+        </select>
+      </div>
       
-      {onClickEvent.actions.length > 0 ? (
+      {currentEvent.actions.length > 0 ? (
         <div className="space-y-3">
-          {onClickEvent.actions.map((act, idx) => (
+          {currentEvent.actions.map((act, idx) => (
             <div key={act.id} className="p-3 bg-gray-50 border rounded-lg relative group">
               <button 
                 onClick={() => removeAction(idx)}
