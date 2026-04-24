@@ -73,21 +73,7 @@ export default function Renderer({
 
   const triggeredRefs = React.useRef<Set<string>>(new Set());
 
-  useEffect(() => {
-    // Execute onLoad events for any components that have them
-    if (isBuilderMode) return;
-    elements.forEach((el) => {
-      if (!triggeredRefs.current.has(el.id)) {
-        const hasOnLoad = el.events?.find((e) => e.trigger === "onLoad");
-        if (hasOnLoad) {
-          triggeredRefs.current.add(el.id);
-          executeElementEvents(el, "onLoad");
-        }
-      }
-    });
-  }, [elements, isBuilderMode, variables, userId, slug, username]);
-
-  const executeElementEvents = async (
+  const executeElementEvents = React.useCallback(async (
     element: PageElement,
     trigger: string,
   ) => {
@@ -102,7 +88,21 @@ export default function Renderer({
         username,
       });
     }
-  };
+  }, [isBuilderMode, variables, setVariable, userId, slug, username]);
+
+  useEffect(() => {
+    // Execute onLoad events for any components that have them
+    if (isBuilderMode) return;
+    elements.forEach((el) => {
+      if (!triggeredRefs.current.has(el.id)) {
+        const hasOnLoad = el.events?.find((e) => e.trigger === "onLoad");
+        if (hasOnLoad) {
+          triggeredRefs.current.add(el.id);
+          executeElementEvents(el, "onLoad");
+        }
+      }
+    });
+  }, [elements, isBuilderMode, executeElementEvents]);
 
   const replaceVariablesInText = (text: string | undefined): string => {
     if (!text || typeof text !== "string") return text || "";

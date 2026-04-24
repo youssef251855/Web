@@ -1873,7 +1873,7 @@ export default function BuilderPage() {
             User Management
           </h2>
           <p className="text-gray-500 text-center max-w-sm mb-6">
-            View and manage users who signed up through your site's Auth forms.
+            View and manage users who signed up through your site&apos;s Auth forms.
           </p>
           <button
             onClick={() => router.push("/dashboard")}
