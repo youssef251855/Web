@@ -99,12 +99,12 @@ export default function Dashboard() {
     if (rootDomain) {
       rootDomain = rootDomain.replace(/^https?:\/\//, '');
       if (rootDomain.endsWith('.vercel.app') || rootDomain.endsWith('.run.app')) {
-        return `${typeof window !== 'undefined' ? window.location.origin : ''}/${username}/${slug}`;
+        return `/${username}/${slug}`;
       }
       const protocol = rootDomain.includes('localhost') ? 'http' : 'https';
       return `${protocol}://${username}.${rootDomain}/${slug}`;
     }
-    return `${typeof window !== 'undefined' ? window.location.origin : ''}/${username}/${slug}`;
+    return `/${username}/${slug}`;
   };
 
   if (!username && user) {
@@ -210,21 +210,20 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="bg-zinc-900 flex mt-auto relative z-50">
-                  <Link
+                  <a
                     href={`/builder/${page.id}`}
-                    prefetch={false}
                     className="flex-1 text-zinc-100 py-5 flex items-center justify-center hover:bg-zinc-800 transition border-r border-zinc-800 font-medium active:bg-zinc-700 select-none z-50 cursor-pointer"
                   >
                     <Edit className="w-4 h-4 mr-2" /> Builder
-                  </Link>
-                  <Link
+                  </a>
+                  <a
                     href={getPublicUrl(page.slug)}
                     target="_blank"
-                    prefetch={false}
+                    rel="noopener noreferrer"
                     className="flex-1 text-zinc-100 py-5 flex items-center justify-center hover:bg-zinc-800 transition font-medium active:bg-zinc-700 select-none z-50 cursor-pointer"
                   >
                     <ExternalLink className="w-4 h-4 mr-2" /> Visit
-                  </Link>
+                  </a>
                 </div>
               </div>
             ))}
