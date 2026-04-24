@@ -80,7 +80,7 @@ export default function Dashboard() {
         updatedAt: serverTimestamp(),
       });
       setIsCreateModalOpen(false);
-      router.push(`/builder/${docRef.id}`);
+      window.open(`/builder/${docRef.id}`, `_blank`);
     } catch (error) {
       console.error("Error creating page", error);
     } finally {
@@ -212,6 +212,8 @@ export default function Dashboard() {
                 <div className="bg-zinc-900 flex mt-auto relative z-50">
                   <a
                     href={`/builder/${page.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex-1 text-zinc-100 py-5 flex items-center justify-center hover:bg-zinc-800 transition border-r border-zinc-800 font-medium active:bg-zinc-700 select-none z-50 cursor-pointer"
                   >
                     <Edit className="w-4 h-4 mr-2" /> Builder
