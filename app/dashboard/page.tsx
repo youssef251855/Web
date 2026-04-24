@@ -209,27 +209,22 @@ export default function Dashboard() {
                     Production
                   </div>
                 </div>
-                <div className="bg-zinc-900/50 border-t border-zinc-800/50 flex mt-auto relative z-20">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      window.location.href = `/builder/${page.id}`;
-                    }}
-                    className="flex-1 text-zinc-300 py-4 flex items-center justify-center hover:bg-zinc-800 transition border-r border-zinc-800/50 font-medium text-sm active:bg-zinc-700 cursor-pointer"
+                <div className="bg-zinc-900 flex mt-auto relative z-50">
+                  <Link
+                    href={`/builder/${page.id}`}
+                    prefetch={false}
+                    className="flex-1 text-zinc-100 py-5 flex items-center justify-center hover:bg-zinc-800 transition border-r border-zinc-800 font-medium active:bg-zinc-700 select-none z-50 cursor-pointer"
                   >
                     <Edit className="w-4 h-4 mr-2" /> Builder
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      window.open(getPublicUrl(page.slug), "_blank");
-                    }}
-                    className="flex-1 text-zinc-300 py-4 flex items-center justify-center hover:bg-zinc-800 transition font-medium text-sm active:bg-zinc-700 cursor-pointer"
+                  </Link>
+                  <Link
+                    href={getPublicUrl(page.slug)}
+                    target="_blank"
+                    prefetch={false}
+                    className="flex-1 text-zinc-100 py-5 flex items-center justify-center hover:bg-zinc-800 transition font-medium active:bg-zinc-700 select-none z-50 cursor-pointer"
                   >
                     <ExternalLink className="w-4 h-4 mr-2" /> Visit
-                  </button>
+                  </Link>
                 </div>
               </div>
             ))}
