@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, memo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { db } from "@/lib/firebase";
@@ -180,17 +180,15 @@ export default function BuilderPage() {
   const { id } = useParams();
   const { user, username, loading } = useAuth();
   const router = useRouter();
-  const {
-    elements,
-    setElements,
-    variables,
-    setVariables,
-    addElement,
-    updateElement,
-    removeElement,
-    selectedElementId,
-    selectElement,
-  } = useBuilderStore();
+  const elements = useBuilderStore(s => s.elements);
+  const setElements = useBuilderStore(s => s.setElements);
+  const variables = useBuilderStore(s => s.variables);
+  const setVariables = useBuilderStore(s => s.setVariables);
+  const addElement = useBuilderStore(s => s.addElement);
+  const updateElement = useBuilderStore(s => s.updateElement);
+  const removeElement = useBuilderStore(s => s.removeElement);
+  const selectedElementId = useBuilderStore(s => s.selectedElementId);
+  const selectElement = useBuilderStore(s => s.selectElement);
   const [pageTitle, setPageTitle] = useState("");
   const [pageSlug, setPageSlug] = useState("");
   const [pageDescription, setPageDescription] = useState("");
@@ -306,13 +304,13 @@ export default function BuilderPage() {
         rootDomain.endsWith(".vercel.app") ||
         rootDomain.endsWith(".run.app")
       ) {
-        return `${typeof window !== "undefined" ? window.location.origin : ""}/${pageSlug}`;
+        return `/${pageSlug}`;
       }
 
       const protocol = rootDomain.includes("localhost") ? "http" : "https";
       return `${protocol}://${username}.${rootDomain}/${pageSlug}`;
     }
-    return `${typeof window !== "undefined" ? window.location.origin : ""}/${pageSlug}`;
+    return `/${pageSlug}`;
   };
 
   const handlePublish = async () => {
@@ -1939,7 +1937,7 @@ export default function BuilderPage() {
   );
 }
 
-function BuilderElement({
+const BuilderElement = memo(function BuilderElement({
   element,
   canvasRef,
   onSelect,
@@ -1948,8 +1946,9 @@ function BuilderElement({
   canvasRef: React.RefObject<HTMLDivElement | null>;
   onSelect: () => void;
 }) {
-  const { selectElement, selectedElementId, updateElement } = useBuilderStore();
-  const isSelected = selectedElementId === element.id;
+  const selectElement = useBuilderStore(state => state.selectElement);
+  const isSelected = useBuilderStore(state => state.selectedElementId === element.id);
+  const updateElement = useBuilderStore(state => state.updateElement);
 
   return (
     <motion.div
@@ -1981,4 +1980,4 @@ function BuilderElement({
       <Renderer elements={[element]} isBuilderMode={true} />
     </motion.div>
   );
-}
+});
