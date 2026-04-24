@@ -209,7 +209,7 @@ export default function Dashboard() {
                     Production
                   </div>
                 </div>
-                <div className="bg-zinc-900/50 border-t border-zinc-800/50 flex opacity-0 group-hover:opacity-100 transition-opacity absolute inset-x-0 bottom-0">
+                <div className="bg-zinc-900/50 border-t border-zinc-800/50 flex mt-auto">
                   <Link
                     href={`/builder/${page.id}`}
                     className="flex-1 text-zinc-300 py-3 flex items-center justify-center hover:bg-zinc-800 transition border-r border-zinc-800/50 font-medium text-sm"
