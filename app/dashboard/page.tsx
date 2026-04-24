@@ -209,24 +209,27 @@ export default function Dashboard() {
                     Production
                   </div>
                 </div>
-                <div className="bg-zinc-900/50 border-t border-zinc-800/50 flex mt-auto z-10 relative">
-                  <a
-                    href={`/builder/${page.id}`}
-                    className="flex-1 text-zinc-300 py-4 flex items-center justify-center hover:bg-zinc-800 transition border-r border-zinc-800/50 font-medium text-sm active:bg-zinc-700 cursor-pointer block"
+                <div className="bg-zinc-900/50 border-t border-zinc-800/50 flex mt-auto relative z-20">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      window.location.href = `/builder/${page.id}`;
+                    }}
+                    className="flex-1 text-zinc-300 py-4 flex items-center justify-center hover:bg-zinc-800 transition border-r border-zinc-800/50 font-medium text-sm active:bg-zinc-700 cursor-pointer"
                   >
-                    <div className="flex items-center justify-center w-full h-full pointer-events-none">
-                      <Edit className="w-4 h-4 mr-2" /> Builder
-                    </div>
-                  </a>
-                  <a
-                    href={getPublicUrl(page.slug)}
-                    target="_blank"
-                    className="flex-1 text-zinc-300 py-4 flex items-center justify-center hover:bg-zinc-800 transition font-medium text-sm active:bg-zinc-700 cursor-pointer block"
+                    <Edit className="w-4 h-4 mr-2" /> Builder
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      window.open(getPublicUrl(page.slug), "_blank");
+                    }}
+                    className="flex-1 text-zinc-300 py-4 flex items-center justify-center hover:bg-zinc-800 transition font-medium text-sm active:bg-zinc-700 cursor-pointer"
                   >
-                    <div className="flex items-center justify-center w-full h-full pointer-events-none">
-                      <ExternalLink className="w-4 h-4 mr-2" /> Visit
-                    </div>
-                  </a>
+                    <ExternalLink className="w-4 h-4 mr-2" /> Visit
+                  </button>
                 </div>
               </div>
             ))}
