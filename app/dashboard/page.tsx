@@ -210,18 +210,22 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="bg-zinc-900/50 border-t border-zinc-800/50 flex mt-auto z-10 relative">
-                  <button
-                    onClick={() => router.push(`/builder/${page.id}`)}
-                    className="flex-1 text-zinc-300 py-4 flex items-center justify-center hover:bg-zinc-800 transition border-r border-zinc-800/50 font-medium text-sm active:bg-zinc-700"
+                  <a
+                    href={`/builder/${page.id}`}
+                    className="flex-1 text-zinc-300 py-4 flex items-center justify-center hover:bg-zinc-800 transition border-r border-zinc-800/50 font-medium text-sm active:bg-zinc-700 cursor-pointer block"
                   >
-                    <Edit className="w-4 h-4 mr-2" /> Builder
-                  </button>
+                    <div className="flex items-center justify-center w-full h-full pointer-events-none">
+                      <Edit className="w-4 h-4 mr-2" /> Builder
+                    </div>
+                  </a>
                   <a
                     href={getPublicUrl(page.slug)}
                     target="_blank"
-                    className="flex-1 text-zinc-300 py-4 flex items-center justify-center hover:bg-zinc-800 transition font-medium text-sm active:bg-zinc-700"
+                    className="flex-1 text-zinc-300 py-4 flex items-center justify-center hover:bg-zinc-800 transition font-medium text-sm active:bg-zinc-700 cursor-pointer block"
                   >
-                    <ExternalLink className="w-4 h-4 mr-2" /> Visit
+                    <div className="flex items-center justify-center w-full h-full pointer-events-none">
+                      <ExternalLink className="w-4 h-4 mr-2" /> Visit
+                    </div>
                   </a>
                 </div>
               </div>
