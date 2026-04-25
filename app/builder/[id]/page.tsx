@@ -176,19 +176,41 @@ const SIDEBAR_CATEGORIES = [
   },
 ];
 
+const BuilderCanvasMap = memo(function BuilderCanvasMap({
+  canvasRef,
+  setMobileView,
+}: {
+  canvasRef: React.RefObject<HTMLDivElement | null>;
+  setMobileView: (view: "elements" | "canvas" | "properties") => void;
+}) {
+  const elements = useBuilderStore((s) => s.elements);
+  return (
+    <>
+      {elements.map((el) => (
+        <BuilderElement
+          key={el.id}
+          element={el}
+          canvasRef={canvasRef}
+          setMobileView={setMobileView}
+        />
+      ))}
+    </>
+  );
+});
+
 export default function BuilderPage() {
   const { id } = useParams();
   const { user, username, loading } = useAuth();
   const router = useRouter();
-  const elements = useBuilderStore(s => s.elements);
-  const setElements = useBuilderStore(s => s.setElements);
-  const variables = useBuilderStore(s => s.variables);
-  const setVariables = useBuilderStore(s => s.setVariables);
-  const addElement = useBuilderStore(s => s.addElement);
-  const updateElement = useBuilderStore(s => s.updateElement);
-  const removeElement = useBuilderStore(s => s.removeElement);
-  const selectedElementId = useBuilderStore(s => s.selectedElementId);
-  const selectElement = useBuilderStore(s => s.selectElement);
+  
+  const setElements = useBuilderStore((s) => s.setElements);
+  const variables = useBuilderStore((s) => s.variables);
+  const setVariables = useBuilderStore((s) => s.setVariables);
+  const addElement = useBuilderStore((s) => s.addElement);
+  const updateElement = useBuilderStore((s) => s.updateElement);
+  const removeElement = useBuilderStore((s) => s.removeElement);
+  const selectedElementId = useBuilderStore((s) => s.selectedElementId);
+  const selectElement = useBuilderStore((s) => s.selectElement);
   const [pageTitle, setPageTitle] = useState("");
   const [pageSlug, setPageSlug] = useState("");
   const [pageDescription, setPageDescription] = useState("");
@@ -280,11 +302,12 @@ export default function BuilderPage() {
     if (!user || !id) return;
     setSaving(true);
     try {
+      const state = useBuilderStore.getState();
       await updateDoc(doc(db, "pages", id as string), {
         title: pageTitle,
         slug: pageSlug,
         description: pageDescription,
-        content: JSON.stringify({ elements, variables }),
+        content: JSON.stringify({ elements: state.elements, variables }),
         updatedAt: new Date(),
       });
     } catch (error) {
@@ -326,16 +349,35 @@ export default function BuilderPage() {
   };
 
   // Auto-save effect
+  const handleSaveRef = useRef(handleSave);
+  handleSaveRef.current = handleSave;
+
   useEffect(() => {
-    if (!user || !id || elements.length === 0) return;
+    if (!user || !id) return;
 
-    const timeoutId = setTimeout(() => {
-      handleSave();
-    }, 2000); // Auto save after 2 seconds of inactivity
+    let timeoutId: NodeJS.Timeout | null = null;
+    let initialRender = true;
+    const unsub = useBuilderStore.subscribe((state, prevState) => {
+      if (initialRender) {
+        initialRender = false;
+        return;
+      }
+      if (
+        state.elements !== prevState.elements ||
+        state.variables !== prevState.variables
+      ) {
+        if (timeoutId) clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          handleSaveRef.current();
+        }, 2000);
+      }
+    });
 
-    return () => clearTimeout(timeoutId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [elements, user, id]);
+    return () => {
+      unsub();
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [user, id]);
 
   const handleAddElement = (type: ElementType) => {
     // Add to center of canvas roughly
@@ -343,7 +385,9 @@ export default function BuilderPage() {
     setMobileView("canvas");
   };
 
-  const selectedElement = elements.find((el) => el.id === selectedElementId);
+  const selectedElement = useBuilderStore((s) =>
+    s.elements.find((el) => el.id === s.selectedElementId),
+  );
 
   const renderContentEditor = () => {
     if (!selectedElement) return null;
@@ -1471,14 +1515,10 @@ export default function BuilderPage() {
                 className="w-full max-w-4xl mx-auto min-h-[800px] bg-white shadow-sm relative"
                 style={{ width: "800px" }}
               >
-                {elements.map((el) => (
-                  <BuilderElement
-                    key={el.id}
-                    element={el}
-                    canvasRef={canvasRef}
-                    onSelect={() => setMobileView("properties")}
-                  />
-                ))}
+                <BuilderCanvasMap
+                  canvasRef={canvasRef}
+                  setMobileView={setMobileView}
+                />
               </div>
             </main>
 
@@ -1871,7 +1911,8 @@ export default function BuilderPage() {
             User Management
           </h2>
           <p className="text-gray-500 text-center max-w-sm mb-6">
-            View and manage users who signed up through your site&apos;s Auth forms.
+            View and manage users who signed up through your site&apos;s Auth
+            forms.
           </p>
           <button
             onClick={() => router.push("/dashboard")}
@@ -1940,15 +1981,17 @@ export default function BuilderPage() {
 const BuilderElement = memo(function BuilderElement({
   element,
   canvasRef,
-  onSelect,
+  setMobileView,
 }: {
   element: PageElement;
   canvasRef: React.RefObject<HTMLDivElement | null>;
-  onSelect: () => void;
+  setMobileView: (view: "elements" | "canvas" | "properties") => void;
 }) {
-  const selectElement = useBuilderStore(state => state.selectElement);
-  const isSelected = useBuilderStore(state => state.selectedElementId === element.id);
-  const updateElement = useBuilderStore(state => state.updateElement);
+  const selectElement = useBuilderStore((state) => state.selectElement);
+  const isSelected = useBuilderStore(
+    (state) => state.selectedElementId === element.id,
+  );
+  const updateElement = useBuilderStore((state) => state.updateElement);
 
   return (
     <motion.div
@@ -1966,7 +2009,7 @@ const BuilderElement = memo(function BuilderElement({
       onClick={(e) => {
         e.stopPropagation();
         selectElement(element.id);
-        onSelect();
+        setMobileView("properties");
       }}
       style={{
         position: "absolute",

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import React, { useState, useEffect } from "react";
 import { PageElement, AppVariable } from "@/lib/builder-store";
 import { executeWorkflow } from "@/lib/workflow-engine";
@@ -73,22 +74,22 @@ export default function Renderer({
 
   const triggeredRefs = React.useRef<Set<string>>(new Set());
 
-  const executeElementEvents = React.useCallback(async (
-    element: PageElement,
-    trigger: string,
-  ) => {
-    if (isBuilderMode || !element.events) return;
-    const ev = element.events.find((e) => e.trigger === trigger);
-    if (ev) {
-      await executeWorkflow(ev.actions, {
-        variables,
-        setVariable,
-        userId: userId || null,
-        pageSlug: slug,
-        username,
-      });
-    }
-  }, [isBuilderMode, variables, setVariable, userId, slug, username]);
+  const executeElementEvents = React.useCallback(
+    async (element: PageElement, trigger: string) => {
+      if (isBuilderMode || !element.events) return;
+      const ev = element.events.find((e) => e.trigger === trigger);
+      if (ev) {
+        await executeWorkflow(ev.actions, {
+          variables,
+          setVariable,
+          userId: userId || null,
+          pageSlug: slug,
+          username,
+        });
+      }
+    },
+    [isBuilderMode, variables, setVariable, userId, slug, username],
+  );
 
   useEffect(() => {
     // Execute onLoad events for any components that have them
