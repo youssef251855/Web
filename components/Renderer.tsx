@@ -219,7 +219,6 @@ export default function Renderer({
         );
       case "image":
         return (
-          // eslint-disable-next-line @next/next/no-img-element
           <img
             id={element.customId}
             src={element.content}
@@ -438,7 +437,6 @@ export default function Renderer({
           >
             {(Array.isArray(element.content) ? element.content : []).map(
               (img, i) => (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   key={i}
                   src={img}
@@ -637,19 +635,21 @@ export default function Renderer({
         return (
           <nav id={element.customId} style={elStyle} className={customClass}>
             {(element.content?.links || []).map((link: any, i: number) => (
-              <button
+              <a
+                href={link.url}
                 key={i}
-                onClick={() => !isBuilderMode && window.open(link.url, "_self")}
+                onClick={(e) => {
+                  if (isBuilderMode) e.preventDefault();
+                }}
                 style={{
-                  background: "none",
-                  border: "none",
+                  textDecoration: "none",
                   color: "#3b82f6",
                   cursor: isBuilderMode ? "default" : "pointer",
                   fontWeight: "medium",
                 }}
               >
                 {replaceVariablesInText(link.label)}
-              </button>
+              </a>
             ))}
           </nav>
         );

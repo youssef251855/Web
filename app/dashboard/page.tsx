@@ -80,7 +80,7 @@ export default function Dashboard() {
         updatedAt: serverTimestamp(),
       });
       setIsCreateModalOpen(false);
-      window.open(`/builder/${docRef.id}`, `_blank`);
+      router.push(`/builder/${docRef.id}`);
     } catch (error) {
       console.error("Error creating page", error);
     } finally {

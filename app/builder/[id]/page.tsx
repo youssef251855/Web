@@ -1358,12 +1358,14 @@ export default function BuilderPage() {
         </div>
 
         <div className="flex items-center space-x-2 shrink-0">
-          <button
-            onClick={() => window.open(getPublicUrl(), "_blank")}
+          <a
+            href={getPublicUrl()}
+            target="_blank"
+            rel="noopener noreferrer"
             className="bg-gray-100 text-gray-700 px-3 py-2 rounded-md flex items-center text-sm hover:bg-gray-200 transition"
           >
             Preview
-          </button>
+          </a>
           <button
             onClick={handleSave}
             disabled={saving}
@@ -1963,12 +1965,14 @@ export default function BuilderPage() {
                 >
                   Close
                 </button>
-                <button
-                  onClick={() => window.open(getPublicUrl(), "_blank")}
+                <a
+                  href={getPublicUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
                 >
                   Visit Page
-                </button>
+                </a>
               </div>
             </div>
           </div>

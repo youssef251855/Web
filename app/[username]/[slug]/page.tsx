@@ -56,6 +56,7 @@ export default function PublicSlugPage() {
         const pageData = pageSnap.docs[0].data();
         const content = JSON.parse(pageData.content);
         setElements(content.elements || []);
+        setVariables(content.variables || []);
       } catch (err) {
         console.error(err);
         setError('Failed to load page');
