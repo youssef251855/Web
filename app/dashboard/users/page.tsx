@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { Users, Trash2, Mail, Shield } from 'lucide-react';
 
 interface SiteUser {
@@ -22,13 +21,13 @@ export default function UsersPage() {
     const fetchUsers = async () => {
       if (!user) return;
       try {
-        const q = query(collection(db, 'site_users'), where('ownerId', '==', user.uid));
-        const snap = await getDocs(q);
-        const fetched: SiteUser[] = [];
-        snap.forEach(d => {
-          fetched.push({ id: d.id, ...d.data() } as SiteUser);
-        });
-        setSiteUsers(fetched);
+        const { data, error } = await supabase
+          .from('site_users')
+          .select('*')
+          .eq('owner_id', user.id);
+          
+        if (error) throw error;
+        setSiteUsers(data as SiteUser[]);
       } catch (error) {
         console.error("Error fetching site users", error);
       } finally {
@@ -41,7 +40,12 @@ export default function UsersPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this user?')) return;
     try {
-      await deleteDoc(doc(db, 'site_users', id));
+      const { error } = await supabase
+        .from('site_users')
+        .delete()
+        .eq('id', id);
+        
+      if (error) throw error;
       setSiteUsers(siteUsers.filter(u => u.id !== id));
     } catch (err) {
       console.error(err);

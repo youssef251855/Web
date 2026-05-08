@@ -4,12 +4,19 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter, usePathname } from 'next/navigation';
 import { LogOut, Layout as LayoutIcon, Database, Users, Settings } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, username, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -17,7 +24,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }, [user, loading, router]);
 
-  if (loading || !user) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (!mounted) return <div className="min-h-screen flex items-center justify-center"></div>;
+  if (loading || !user) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>;
 
   return (
     <div className="min-h-screen flex bg-gray-50">

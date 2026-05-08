@@ -3,8 +3,7 @@
 // ... imports
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { Plus, Edit, ExternalLink, Layout as LayoutIcon, MessageSquare, CreditCard, PanelsTopLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -31,13 +30,13 @@ export default function Dashboard() {
     const fetchPages = async () => {
       if (!user) return;
       try {
-        const q = query(collection(db, 'pages'), where('userId', '==', user.uid));
-        const querySnapshot = await getDocs(q);
-        const fetchedPages: Page[] = [];
-        querySnapshot.forEach((doc) => {
-          fetchedPages.push({ id: doc.id, ...doc.data() } as Page);
-        });
-        setPages(fetchedPages);
+        const { data, error } = await supabase
+          .from('pages')
+          .select('*')
+          .eq('user_id', user.id);
+          
+        if (error) throw error;
+        setPages(data as Page[]);
       } catch (error) {
         console.error("Error fetching pages", error);
       } finally {
@@ -55,7 +54,7 @@ export default function Dashboard() {
     if (!user || !newPageTitle.trim()) return;
     
     setIsCreating(true);
-    const slug = newPageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    const slug = newPageTitle.toLowerCase().replace(/\s+/g, '-').replace(/(^-|-$)+/g, '');
     
     let initialElements: any[] = [];
     if (selectedTemplate === 'chat') {
@@ -71,16 +70,21 @@ export default function Dashboard() {
     }
 
     try {
-      const docRef = await addDoc(collection(db, 'pages'), {
-        userId: user.uid,
-        title: newPageTitle,
-        slug,
-        content: JSON.stringify({ elements: initialElements }),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      const { data, error } = await supabase
+        .from('pages')
+        .insert({
+          user_id: user.id,
+          title: newPageTitle,
+          slug,
+          content: JSON.stringify({ elements: initialElements }),
+        })
+        .select('id')
+        .single();
+        
+      if (error) throw error;
+      
       setIsCreateModalOpen(false);
-      router.push(`/builder/${docRef.id}`);
+      router.push(`/builder/${data.id}`);
     } catch (error) {
       console.error("Error creating page", error);
     } finally {
@@ -91,7 +95,7 @@ export default function Dashboard() {
   const handleSetUsername = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUsername) return;
-    await setUsername(newUsername);
+    await setUsername(newUsername.trim().toLowerCase());
   };
 
   const getPublicUrl = (slug: string) => {

@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { Settings, Save, Image as ImageIcon } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -18,11 +17,15 @@ export default function SettingsPage() {
     const fetchSettings = async () => {
       if (!user) return;
       try {
-        const docRef = doc(db, 'user_settings', user.uid);
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          setCloudinaryCloudName(snap.data().cloudinaryCloudName || '');
-          setCloudinaryUploadPreset(snap.data().cloudinaryUploadPreset || '');
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('settings')
+          .eq('user_id', user.id)
+          .maybeSingle(); 
+
+        if (data && data.settings) {
+          setCloudinaryCloudName(data.settings.cloudinaryCloudName || '');
+          setCloudinaryUploadPreset(data.settings.cloudinaryUploadPreset || '');
         }
       } catch (error) {
         console.error("Error fetching settings", error);
@@ -39,15 +42,22 @@ export default function SettingsPage() {
     setSaving(true);
     setMessage('');
     try {
-      await setDoc(doc(db, 'user_settings', user.uid), {
-        cloudinaryCloudName,
-        cloudinaryUploadPreset,
-        updatedAt: new Date()
-      }, { merge: true });
+      const { error } = await supabase
+        .from('user_settings')
+        .upsert({
+          user_id: user.id,
+          settings: {
+            cloudinaryCloudName,
+            cloudinaryUploadPreset,
+          },
+        }, { onConflict: 'user_id' });
+        
+      if (error) throw error;
+      
       setMessage('Settings saved successfully!');
     } catch (error) {
-      console.error("Error saving settings", error);
-      setMessage('Failed to save settings.');
+      console.error("Error saving settings", JSON.stringify(error, null, 2));
+      setMessage('Failed to save settings: ' + (error instanceof Error ? error.message : JSON.stringify(error)));
     } finally {
       setSaving(false);
     }

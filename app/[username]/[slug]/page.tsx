@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { PageElement, AppVariable } from '@/lib/builder-store';
 import Renderer from '@/components/Renderer';
 
@@ -27,33 +26,68 @@ export default function PublicSlugPage() {
     });
   };
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     const fetchPage = async () => {
       try {
-        const usersRef = collection(db, 'users');
-        const qUser = query(usersRef, where('username', '==', username), limit(1));
-        const userSnap = await getDocs(qUser);
+        const currentUsername = Array.isArray(username) ? username[0] : (username || '');
+        const decodedUsername = decodeURIComponent(currentUsername);
         
-        if (userSnap.empty) {
-          setError('User not found');
+        const usernameVariations = Array.from(new Set([
+          currentUsername,
+          decodedUsername,
+          decodedUsername.trim(),
+          decodedUsername.toLowerCase(),
+          decodedUsername.toLowerCase().trim(),
+          currentUsername.toLowerCase(),
+        ])).filter(Boolean);
+
+        const { data: userSnap, error: userError } = await supabase
+          .from('users')
+          .select('id')
+          .in('username', usernameVariations)
+          .limit(1);
+        
+        if (userError || !userSnap || userSnap.length === 0) {
+          setError(`User not found: ${decodedUsername}`);
           setLoading(false);
           return;
         }
         
-        const fetchedUserId = userSnap.docs[0].id;
+        const fetchedUserId = userSnap[0].id;
         setUserId(fetchedUserId);
 
-        const pagesRef = collection(db, 'pages');
-        const qPage = query(pagesRef, where('userId', '==', fetchedUserId), where('slug', '==', slug), limit(1));
-        const pageSnap = await getDocs(qPage);
+        const currentSlug = Array.isArray(slug) ? slug[0] : (slug || '');
+        const decodedSlug = decodeURIComponent(currentSlug);
+        
+        const slugVariations = Array.from(new Set([
+          currentSlug,
+          decodedSlug,
+          decodedSlug.trim(),
+          decodedSlug.toLowerCase(),
+          decodedSlug.toLowerCase().replace(/\s+/g, '-').replace(/(^-|-$)+/g, ''),
+          currentSlug.toLowerCase(),
+        ])).filter(Boolean);
 
-        if (pageSnap.empty) {
-          setError('Page not found');
+        const { data: pageSnap, error: pageError } = await supabase
+          .from('pages')
+          .select('content')
+          .eq('user_id', fetchedUserId)
+          .in('slug', slugVariations)
+          .limit(1);
+        
+        if (pageError || !pageSnap || pageSnap.length === 0) {
+          setError(`Page not found: ${decodedSlug}`);
           setLoading(false);
           return;
         }
 
-        const pageData = pageSnap.docs[0].data();
+        const pageData = pageSnap[0];
         const content = JSON.parse(pageData.content);
         setElements(content.elements || []);
         setVariables(content.variables || []);
@@ -70,7 +104,8 @@ export default function PublicSlugPage() {
     }
   }, [username, slug]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (!mounted) return <div className="min-h-screen flex items-center justify-center"></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>;
   if (error || !userId) return <div className="min-h-screen flex items-center justify-center text-red-500">{error || 'User ID missing'}</div>;
 
   const renderedUsername = Array.isArray(username) ? username[0] : (username || '');

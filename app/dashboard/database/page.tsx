@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { db } from '@/lib/firebase';
-import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { supabase } from '@/lib/supabase';
 import { Plus, Trash2, Save, Database as DbIcon, Type, Hash, Calendar, Settings, ListPlus, LayoutList } from 'lucide-react';
 
 interface Field {
@@ -31,16 +30,19 @@ export default function DatabasePage() {
     const fetchTables = async () => {
       if (!user) return;
       try {
-        const q = query(collection(db, 'tables'), where('userId', '==', user.uid));
-        const snap = await getDocs(q);
-        const fetchedTables: Table[] = [];
-        snap.forEach(d => {
-          fetchedTables.push({
-            id: d.id,
-            name: d.data().name,
-            fields: JSON.parse(d.data().fields),
-          });
-        });
+        const { data, error } = await supabase
+          .from('tables')
+          .select('*')
+          .eq('user_id', user.id);
+          
+        if (error) throw error;
+        
+        const fetchedTables: Table[] = data.map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          fields: typeof d.fields === 'string' ? JSON.parse(d.fields) : d.fields,
+        }));
+        
         setTables(fetchedTables);
         if (fetchedTables.length > 0) setSelectedTable(fetchedTables[0]);
       } catch (error) {
@@ -63,15 +65,19 @@ export default function DatabasePage() {
     ];
 
     try {
-      const docRef = await addDoc(collection(db, 'tables'), {
-        userId: user.uid,
-        name: newTableName,
-        fields: JSON.stringify(defaultFields),
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+      const { data, error } = await supabase
+        .from('tables')
+        .insert({
+          user_id: user.id,
+          name: newTableName,
+          fields: JSON.stringify(defaultFields),
+        })
+        .select('id')
+        .single();
+        
+      if (error) throw error;
       
-      const newTable: Table = { id: docRef.id, name: newTableName, fields: defaultFields };
+      const newTable: Table = { id: data.id, name: newTableName, fields: defaultFields };
       setTables([...tables, newTable]);
       setSelectedTable(newTable);
       setNewTableName('');
@@ -110,10 +116,14 @@ export default function DatabasePage() {
     setTables(tables.map(t => t.id === updatedTable.id ? updatedTable : t));
 
     try {
-      await updateDoc(doc(db, 'tables', selectedTable.id), {
-        fields: JSON.stringify(updatedFields),
-        updatedAt: serverTimestamp(),
-      });
+      const { error } = await supabase
+        .from('tables')
+        .update({
+          fields: JSON.stringify(updatedFields),
+        })
+        .eq('id', selectedTable.id);
+        
+      if (error) throw error;
     } catch (error) {
       console.error("Error updating table", error);
     }
@@ -122,7 +132,13 @@ export default function DatabasePage() {
   const handleDeleteTable = async () => {
     if (!selectedTable || !confirm('Are you sure you want to delete this table? All data will be lost.')) return;
     try {
-      await deleteDoc(doc(db, 'tables', selectedTable.id));
+      const { error } = await supabase
+        .from('tables')
+        .delete()
+        .eq('id', selectedTable.id);
+        
+      if (error) throw error;
+      
       const newTables = tables.filter(t => t.id !== selectedTable.id);
       setTables(newTables);
       setSelectedTable(newTables.length > 0 ? newTables[0] : null);

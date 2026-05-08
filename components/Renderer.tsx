@@ -2,16 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { PageElement, AppVariable } from "@/lib/builder-store";
 import { executeWorkflow } from "@/lib/workflow-engine";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  addDoc,
-  serverTimestamp,
-  limit,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { supabase } from "@/lib/supabase";
 import { Star } from "lucide-react";
 
 interface RendererProps {
@@ -52,14 +43,16 @@ export default function Renderer({
           (el.type === "list" || el.type === "table")
         ) {
           try {
-            const q = query(
-              collection(db, "records"),
-              where("tableId", "==", el.dataSource.tableId),
-              where("userId", "==", userId),
-              // We can add limits & sorts if they exist in el.dataSource
-            );
-            const snap = await getDocs(q);
-            sources[el.id] = snap.docs.map((d) => JSON.parse(d.data().data));
+            const { data, error } = await supabase
+              .from('records')
+              .select('data')
+              .eq('table_id', el.dataSource.tableId)
+              .eq('user_id', userId);
+              
+            if (error) throw error;
+            if (data) {
+              sources[el.id] = data.map((d: any) => typeof d.data === 'string' ? JSON.parse(d.data) : d.data);
+            }
           } catch (e) {
             console.error("Data fetch error for element", el.id, e);
           }
@@ -127,13 +120,16 @@ export default function Renderer({
       formData.forEach((value, key) => (data[key] = value));
 
       try {
-        await addDoc(collection(db, "records"), {
-          tableId: element.dataSource.tableId,
-          userId,
-          data: JSON.stringify(data),
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+        const { error } = await supabase
+          .from('records')
+          .insert({
+            tableId: element.dataSource.tableId,
+            userId,
+            data: JSON.stringify(data),
+          });
+          
+        if (error) throw error;
+        
         setFormSuccess((prev) => ({ ...prev, [element.id]: true }));
         (e.target as HTMLFormElement).reset();
         await executeElementEvents(element, "onSubmit");
@@ -150,13 +146,17 @@ export default function Renderer({
       setFormSuccess((prev) => ({ ...prev, [element.id]: false }));
       const formData = new FormData(e.target as HTMLFormElement);
       try {
-        await addDoc(collection(db, "site_users"), {
-          ownerId: userId,
-          email: formData.get("Email") as string,
-          password: formData.get("Password") as string,
-          role: "user",
-          createdAt: serverTimestamp(),
-        });
+        const { error } = await supabase
+          .from('site_users')
+          .insert({
+            owner_id: userId,
+            email: formData.get("Email") as string,
+            password: formData.get("Password") as string,
+            role: "user",
+          });
+          
+        if (error) throw error;
+        
         setFormSuccess((prev) => ({ ...prev, [element.id]: true }));
         (e.target as HTMLFormElement).reset();
         await executeElementEvents(element, "onSubmit");
@@ -172,15 +172,17 @@ export default function Renderer({
       setFormSuccess((prev) => ({ ...prev, [element.id]: false }));
       const formData = new FormData(e.target as HTMLFormElement);
       try {
-        const q = query(
-          collection(db, "site_users"),
-          where("ownerId", "==", userId),
-          where("email", "==", formData.get("Email")),
-          where("password", "==", formData.get("Password")),
-          limit(1),
-        );
-        const snap = await getDocs(q);
-        if (!snap.empty) {
+        const { data, error } = await supabase
+          .from('site_users')
+          .select('id')
+          .eq('owner_id', userId)
+          .eq('email', formData.get("Email") as string)
+          .eq('password', formData.get("Password") as string)
+          .limit(1);
+          
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
           setFormSuccess((prev) => ({ ...prev, [element.id]: true }));
           await executeElementEvents(element, "onSubmit");
         } else {
@@ -634,9 +636,23 @@ export default function Renderer({
       case "nav_bar":
         return (
           <nav id={element.customId} style={elStyle} className={customClass}>
-            {(element.content?.links || []).map((link: any, i: number) => (
+            {(element.content?.links || []).map((link: any, i: number) => {
+              let finalUrl = link.url;
+              if (finalUrl && !finalUrl.startsWith('http')) {
+                // If the URL is a relative path like 'about' or '/about'
+                // We should make sure it directs to the correct path under the user's site
+                const cleanPath = finalUrl.replace(/^\/+/, '');
+                if (username) {
+                  finalUrl = `/${username}/${cleanPath}`;
+                } else if (finalUrl.startsWith('/')) {
+                   // Leave it as is for custom domains
+                } else {
+                   finalUrl = `/${cleanPath}`;
+                }
+              }
+              return (
               <a
-                href={link.url}
+                href={finalUrl}
                 key={i}
                 onClick={(e) => {
                   if (isBuilderMode) e.preventDefault();
@@ -650,7 +666,7 @@ export default function Renderer({
               >
                 {replaceVariablesInText(link.label)}
               </a>
-            ))}
+            )})}
           </nav>
         );
       case "product_card":

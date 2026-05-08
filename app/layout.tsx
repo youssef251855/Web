@@ -9,7 +9,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.addEventListener('unhandledrejection', function(event) {
+                if (event.reason && Object.prototype.toString.call(event.reason) === '[object Event]') {
+                  event.preventDefault();
+                }
+              });
+            `
+          }}
+        />
+      </head>
       <body suppressHydrationWarning>
         <AuthProvider>
           {children}

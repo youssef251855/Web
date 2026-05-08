@@ -3,16 +3,7 @@
 import { useEffect, useState, useRef, memo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { db } from "@/lib/firebase";
-import {
-  doc,
-  getDoc,
-  updateDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
+import { supabase } from "@/lib/supabase";
 import { useBuilderStore, ElementType, PageElement } from "@/lib/builder-store";
 import { motion } from "motion/react";
 import {
@@ -245,17 +236,32 @@ export default function BuilderPage() {
   useEffect(() => {
     const fetchPage = async () => {
       if (!user || !id) return;
-      const docRef = doc(db, "pages", id as string);
-      const docSnap = await getDoc(docRef);
+      const { data: docSnap, error } = await supabase
+        .from("pages")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
 
-      if (docSnap.exists() && docSnap.data().userId === user.uid) {
-        setPageTitle(docSnap.data().title);
-        setPageSlug(docSnap.data().slug);
-        setPageDescription(docSnap.data().description || "");
-        const content = JSON.parse(docSnap.data().content);
-        setElements(content.elements || []);
-        setVariables(content.variables || []);
+      if (error) {
+        console.error("Error fetching page:", error);
+        alert("Error fetching page: " + error.message);
+        router.push("/dashboard");
+        return;
+      }
+      if (docSnap) {
+        if (docSnap.user_id === user.id) {
+          setPageTitle(docSnap.title);
+          setPageSlug(docSnap.slug);
+          setPageDescription(docSnap.description || "");
+          const content = typeof docSnap.content === 'string' ? JSON.parse(docSnap.content) : docSnap.content;
+          setElements(content?.elements || []);
+          setVariables(content?.variables || []);
+        } else {
+          alert(`You do not have permission to edit this page. User: ${user.id}, Page owner: ${docSnap.user_id}`);
+          router.push("/dashboard");
+        }
       } else {
+        alert("Page not found");
         router.push("/dashboard");
       }
     };
@@ -266,33 +272,42 @@ export default function BuilderPage() {
     const fetchUserPagesAndTables = async () => {
       if (!user) return;
 
-      const qPages = query(
-        collection(db, "pages"),
-        where("userId", "==", user.uid),
-      );
-      const snapPages = await getDocs(qPages);
-      const pages = snapPages.docs.map((d) => ({
-        id: d.id,
-        title: d.data().title,
-        slug: d.data().slug,
-      }));
-      setUserPages(pages);
+      const { data: snapPages } = await supabase
+        .from("pages")
+        .select("*")
+        .eq("user_id", user.id);
+        
+      if (snapPages) {
+        const pages = snapPages.map((d: any) => ({
+          id: d.id,
+          title: d.title,
+          slug: d.slug,
+        }));
+        setUserPages(pages);
+      }
 
-      const qTables = query(
-        collection(db, "tables"),
-        where("userId", "==", user.uid),
-      );
-      const snapTables = await getDocs(qTables);
-      const tables = snapTables.docs.map((d) => ({
-        id: d.id,
-        name: d.data().name,
-        fields: JSON.parse(d.data().fields || "[]"),
-      }));
-      setUserTables(tables);
+      const { data: snapTables } = await supabase
+        .from("tables")
+        .select("*")
+        .eq("user_id", user.id);
+        
+      if (snapTables) {
+        const tables = snapTables.map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          fields: typeof d.fields === 'string' ? JSON.parse(d.fields || "[]") : d.fields,
+        }));
+        setUserTables(tables);
+      }
 
-      const settingsSnap = await getDoc(doc(db, "user_settings", user.uid));
-      if (settingsSnap.exists()) {
-        setUserSettings(settingsSnap.data());
+      const { data: settingsSnap } = await supabase
+        .from("user_settings")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+        
+      if (settingsSnap) {
+        setUserSettings(settingsSnap);
       }
     };
     fetchUserPagesAndTables();
@@ -303,15 +318,22 @@ export default function BuilderPage() {
     setSaving(true);
     try {
       const state = useBuilderStore.getState();
-      await updateDoc(doc(db, "pages", id as string), {
-        title: pageTitle,
-        slug: pageSlug,
-        description: pageDescription,
-        content: JSON.stringify({ elements: state.elements, variables }),
-        updatedAt: new Date(),
-      });
-    } catch (error) {
+      const { error } = await supabase
+        .from("pages")
+        .update({
+          title: pageTitle,
+          slug: pageSlug,
+          description: pageDescription,
+          content: JSON.stringify({ elements: state.elements, variables }),
+        })
+        .eq("id", id);
+        
+      if (error) throw error;
+      
+      alert('Page saved successfully!');
+    } catch (error: any) {
       console.error("Error saving page", error);
+      alert('Error saving page: ' + error.message);
     } finally {
       setSaving(false);
     }
@@ -327,13 +349,13 @@ export default function BuilderPage() {
         rootDomain.endsWith(".vercel.app") ||
         rootDomain.endsWith(".run.app")
       ) {
-        return `/${pageSlug}`;
+        return `/${username || "user"}/${pageSlug}`;
       }
 
       const protocol = rootDomain.includes("localhost") ? "http" : "https";
-      return `${protocol}://${username}.${rootDomain}/${pageSlug}`;
+      return `${protocol}://${username || "user"}.${rootDomain}/${pageSlug}`;
     }
-    return `/${pageSlug}`;
+    return `/${username || "user"}/${pageSlug}`;
   };
 
   const handlePublish = async () => {

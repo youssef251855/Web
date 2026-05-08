@@ -1,15 +1,16 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db, handleFirestoreError, OperationType } from './firebase';
+import { User } from '@supabase/supabase-js';
+import { supabase, OperationType } from './supabase';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   username: string | null;
   signIn: () => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<{ user: User | null; session: any | null }>;
   logout: () => Promise<void>;
   setUsername: (username: string) => Promise<void>;
 }
@@ -19,6 +20,8 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   username: null,
   signIn: async () => {},
+  signInWithEmail: async () => {},
+  signUpWithEmail: async () => ({ user: null, session: null }),
   logout: async () => {},
   setUsername: async () => {},
 });
@@ -29,57 +32,89 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [username, setUsernameState] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', currentUser.uid));
-          if (userDoc.exists()) {
-            setUsernameState(userDoc.data().username);
-          } else {
-            setUsernameState(null);
-          }
-        } catch (error) {
-          console.error("Error fetching user data", error);
-        }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchUsername(session.user.id);
+      else setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchUsername(session.user.id);
+      else {
+        setUsernameState(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchUsername = async (userId: string) => {
+    try {
+      const { data, error } = await supabase.from('users').select('username').eq('id', userId).single();
+      if (!error && data) {
+        setUsernameState(data.username);
       } else {
         setUsernameState(null);
       }
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  const signIn = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
     } catch (error) {
-      console.error("Error signing in", error);
+      console.error("Error fetching user data", error);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const signIn = async () => {
+    try {
+      await supabase.auth.signInWithOAuth({ 
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`
+        }
+      });
+    } catch (error) {
+      console.error("Error signing in with Google", error);
+    }
+  };
+
+  const signInWithEmail = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  };
+
+  const signUpWithEmail = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({ 
+      email, 
+      password,
+      options: { emailRedirectTo: window.location.origin }
+    });
+    if (error) throw error;
+    return data;
+  };
+
   const logout = async () => {
-    await signOut(auth);
+    await supabase.auth.signOut();
   };
 
   const setUsername = async (newUsername: string) => {
     if (!user) return;
     try {
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
+      const { error } = await supabase.from('users').upsert({
+        id: user.id,
         email: user.email,
         username: newUsername,
-        createdAt: serverTimestamp(),
       });
+      if (error) throw error;
       setUsernameState(newUsername);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `users/${user.uid}`);
+    } catch (error: any) {
+       console.error("Error setting username", error);
+       throw new Error(error.message);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, username, signIn, logout, setUsername }}>
+    <AuthContext.Provider value={{ user, loading, username, signIn, signInWithEmail, signUpWithEmail, logout, setUsername }}>
       {children}
     </AuthContext.Provider>
   );

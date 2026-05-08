@@ -1,6 +1,5 @@
 import { ActionStep, AppVariable } from './builder-store';
-import { db } from './firebase';
-import { collection, addDoc, updateDoc, doc, deleteDoc, getDocs, query, where } from 'firebase/firestore';
+import { supabase } from './supabase';
 
 export const executeWorkflow = async (
   actions: ActionStep[], 
@@ -71,10 +70,16 @@ export const executeWorkflow = async (
           break;
         case 'navigate_url':
           if (step.params.url) {
+            let finalNavUrl = step.params.url;
+            if (!finalNavUrl.startsWith('http') && context.username) {
+               const cleanPath = finalNavUrl.replace(/^\/+/, '');
+               finalNavUrl = `/${context.username}/${cleanPath}`;
+            }
+
             if (step.params.newTab) {
-              window.open(step.params.url, '_blank');
+              window.open(finalNavUrl, '_blank');
             } else {
-              window.location.href = step.params.url;
+              window.location.href = finalNavUrl;
             }
           }
           break;
@@ -83,26 +88,26 @@ export const executeWorkflow = async (
           break;
         case 'db_create':
           if (step.params.tableId) {
-            await addDoc(collection(db, 'records'), {
-              tableId: step.params.tableId,
-              userId: context.userId,
+            const { error } = await supabase.from('records').insert({
+              table_id: step.params.tableId,
+              user_id: context.userId,
               data: JSON.stringify(resolvePayload(step.params.payload || {})),
-              createdAt: new Date(),
-              updatedAt: new Date(),
             });
+            if (error) throw error;
           }
           break;
         case 'db_update':
           if (step.params.recordId) {
-            await updateDoc(doc(db, 'records', step.params.recordId), {
+            const { error } = await supabase.from('records').update({
               data: JSON.stringify(resolvePayload(step.params.payload || {})),
-              updatedAt: new Date()
-            });
+            }).eq('id', step.params.recordId);
+            if (error) throw error;
           }
           break;
         case 'db_delete':
           if (step.params.recordId) {
-            await deleteDoc(doc(db, 'records', step.params.recordId));
+            const { error } = await supabase.from('records').delete().eq('id', step.params.recordId);
+            if (error) throw error;
           }
           break;
         case 'api_request':
