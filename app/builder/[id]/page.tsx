@@ -1785,6 +1785,22 @@ export default function BuilderPage() {
                          selectedElement.type === "image") && (
                           <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded-md border border-blue-100 mt-2">
                             Bind single record. Example: Use <b>{"{{CurrentItem.field_name}}"}</b> in content to render the value.
+                            <div className="mt-2">
+                              <p className="font-semibold mb-1">Available Properties (click to copy):</p>
+                              <div className="flex flex-wrap gap-1">
+                                {userTables
+                                  .find((t) => t.id === selectedElement.dataSource?.tableId)
+                                  ?.fields?.map((field: any) => (
+                                    <button
+                                      key={field.name}
+                                      onClick={() => navigator.clipboard.writeText(`{{CurrentItem.${field.name}}}`)}
+                                      className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px] hover:bg-gray-200"
+                                    >
+                                      {field.name}
+                                    </button>
+                                  ))}
+                              </div>
+                            </div>
                           </div>
                       )}
                       {selectedElement.dataSource?.tableId &&

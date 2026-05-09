@@ -26,12 +26,28 @@ export default function Renderer({
 }: RendererProps) {
   // State for components that need DB
   const [dataSources, setDataSources] = useState<Record<string, any[]>>({});
+  const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formSuccess, setFormSuccess] = useState<{ [key: string]: boolean }>(
     {},
   );
 
   useEffect(() => {
+    // Fetch profile
+    const fetchProfile = async () => {
+      if (!userId) return;
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (!error && data) {
+        setCurrentUserProfile(data);
+      }
+    };
+    fetchProfile();
+
     // Fetch external data for any lists/tables
     const fetchAllData = async () => {
       if (!userId) return;
@@ -121,7 +137,11 @@ export default function Renderer({
     }
 
     // Then, map simple global variables
-    variables.forEach((v) => {
+    const allVariables = [
+        ...variables,
+        { name: 'currentUser', defaultValue: currentUserProfile }
+    ];
+    allVariables.forEach((v) => {
       // Find all matches for this specific variable name with possible dot notation
       const regex = new RegExp(`{{\\s*${v.name}(?:\\.[a-zA-Z0-9_]+)*\\s*}}`, "g");
       result = result.replace(regex, (match) => {
@@ -162,6 +182,27 @@ export default function Renderer({
       // 2) If it's attached to a DB, save it.
       if (element.dataSource?.tableId && userId) {
         try {
+          // Process file uploads first
+          const files = Array.from(formData.entries())
+            .filter(([_, value]) => value instanceof File);
+          
+          for (const [key, value] of files) {
+              const file = value as File;
+              const fileExt = file.name.split('.').pop();
+              const fileName = `${Math.random()}.${fileExt}`;
+              const { data: storageData, error: storageError } = await supabase.storage
+                  .from('userdata')
+                  .upload(fileName, file);
+
+              if (storageError) throw storageError;
+
+              const { data: publicUrlData } = supabase.storage
+                  .from('userdata')
+                  .getPublicUrl(fileName);
+
+              data[key] = publicUrlData.publicUrl;
+          }
+
           const { error } = await supabase
             .from('records')
             .insert({
