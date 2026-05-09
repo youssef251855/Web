@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { Plus, Trash2, Save, Database as DbIcon, Type, Hash, Calendar, Settings, ListPlus, LayoutList } from 'lucide-react';
+import { Plus, Trash2, Save, Database as DbIcon, Type, Hash, Calendar, Settings, ListPlus, LayoutList, Upload } from 'lucide-react';
 
 interface Field {
   id: string;
@@ -129,6 +129,52 @@ export default function DatabasePage() {
     }
   };
 
+  const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedTable || !user) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const result = event.target?.result;
+        if (typeof result !== 'string') return;
+        
+        let parsedData;
+        try {
+          parsedData = JSON.parse(result);
+        } catch (e) {
+          alert('Invalid JSON file.');
+          return;
+        }
+
+        if (!Array.isArray(parsedData)) {
+          alert('JSON file must contain an array of objects.');
+          return;
+        }
+
+        let addedCount = 0;
+        for (const item of parsedData) {
+          const { error } = await supabase
+            .from('records')
+            .insert({
+              table_id: selectedTable.id,
+              user_id: user.id,
+              data: JSON.stringify(item),
+            });
+          if (!error) addedCount++;
+        }
+
+        alert(`Successfully imported ${addedCount} records.`);
+      } catch (error) {
+        console.error('Failed to import JSON', error);
+        alert('Failed to import JSON. Please check the file format.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
   const handleDeleteTable = async () => {
     if (!selectedTable || !confirm('Are you sure you want to delete this table? All data will be lost.')) return;
     try {
@@ -200,12 +246,27 @@ export default function DatabasePage() {
                 <h1 className="text-2xl font-bold text-gray-900">{selectedTable.name} Schema</h1>
                 <p className="text-sm text-gray-500 mt-1">Define the fields and data types for this collection.</p>
               </div>
-              <button 
-                onClick={handleDeleteTable}
-                className="text-red-600 hover:bg-red-50 px-3 py-2 rounded-md transition flex items-center text-sm font-medium"
-              >
-                <Trash2 className="w-4 h-4 mr-2" /> Delete Collection
-              </button>
+              <div className="flex items-center gap-2">
+                <input
+                  type="file"
+                  accept=".json"
+                  id={`import-json-${selectedTable.id}`}
+                  className="hidden"
+                  onChange={handleImportJson}
+                />
+                <button
+                  onClick={() => document.getElementById(`import-json-${selectedTable.id}`)?.click()}
+                  className="text-gray-700 hover:bg-gray-100 px-3 py-2 rounded-md transition flex items-center text-sm font-medium border"
+                >
+                  <Upload className="w-4 h-4 mr-2" /> Import JSON
+                </button>
+                <button 
+                  onClick={handleDeleteTable}
+                  className="text-red-600 hover:bg-red-50 px-3 py-2 rounded-md transition flex items-center text-sm font-medium"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" /> Delete Collection
+                </button>
+              </div>
             </div>
             
             <div className="flex-1 overflow-y-auto p-8">

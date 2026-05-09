@@ -153,6 +153,18 @@ export default function Renderer({
             });
             
           if (error) throw error;
+          
+          setDataSources((prev) => {
+             const updated = { ...prev };
+             // find any list bound to same tableId
+             elements.forEach((el) => {
+                if (el.dataSource?.tableId === element.dataSource?.tableId && el.type === 'list') {
+                   updated[el.id] = [...(updated[el.id] || []), data];
+                }
+             })
+             return updated;
+          });
+          
           setFormSuccess((prev) => ({ ...prev, [element.id]: true }));
           (e.target as HTMLFormElement).reset();
         } catch (error) {
@@ -173,18 +185,21 @@ export default function Renderer({
       setFormSuccess((prev) => ({ ...prev, [element.id]: false }));
       const formData = new FormData(e.target as HTMLFormElement);
       try {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('site_users')
           .insert({
             owner_id: userId,
             email: formData.get("Email") as string,
             password: formData.get("Password") as string,
             role: "user",
-          });
+          })
+          .select('id')
+          .single();
           
         if (error) throw error;
         
         setFormSuccess((prev) => ({ ...prev, [element.id]: true }));
+        setVariable("currentUser", { id: data.id, email: formData.get("Email") });
         (e.target as HTMLFormElement).reset();
         await executeElementEvents(element, "onSubmit");
       } catch (e) {
@@ -245,6 +260,25 @@ export default function Renderer({
           >
             {replaceVariablesInText(element.content)}
           </h2>
+        );
+      case "input":
+        return (
+          <input
+            id={element.customId}
+            type={(element.content as any)?.type || "text"}
+            placeholder={replaceVariablesInText((element.content as any)?.placeholder || "Enter text...")}
+            defaultValue={replaceVariablesInText((element.content as any)?.defaultValue || "")}
+            style={elStyle}
+            name={(element.content as any)?.name}
+            className={`px-3 py-2 border rounded-md w-full ${customClass}`}
+            onChange={async (e) => {
+               const varName = (element.content as any)?.saveToVariable;
+               if (varName) {
+                 setVariable(varName, e.target.value);
+               }
+               await executeElementEvents(element, "onChange");
+            }}
+          />
         );
       case "image":
         return (
@@ -318,22 +352,24 @@ export default function Renderer({
       case "list":
         const listData =
           dataSources[element.id] && dataSources[element.id].length > 0
-            ? dataSources[element.id].map((r) => Object.values(r).join(" - "))
+            ? dataSources[element.id].map((r) => r.Message || Object.values(r).join(" - "))
             : element.content;
         return (
           <ul
             id={element.customId}
             style={{
               ...elStyle,
-              listStyleType: "disc",
-              paddingLeft: "20px",
+              listStyleType: elStyle.listStyleType || "disc",
+              paddingLeft: elStyle.listStyleType === "none" ? "0px" : "20px",
               pointerEvents: isBuilderMode ? "none" : "auto",
             }}
             className={customClass}
           >
             {(Array.isArray(listData) ? listData : []).map(
               (item: any, i: number) => (
-                <li key={i}>{replaceVariablesInText(String(item))}</li>
+                <li key={i} style={elStyle.listStyleType === 'none' ? { backgroundColor: '#dcf8c6', padding: '10px 15px', borderRadius: '15px', marginBottom: '8px', maxWidth: '80%', wordWrap: 'break-word', boxShadow: '0 1px 1px rgba(0,0,0,0.1)' } : {}}>
+                  {replaceVariablesInText(String(item))}
+                </li>
               ),
             )}
           </ul>
@@ -508,40 +544,24 @@ export default function Renderer({
                 Action successful!
               </div>
             )}
-            {element.type === "form" && (
-              <>
-                <input
-                  type="text"
-                  name="Name"
-                  placeholder="Name"
-                  required
-                  disabled={isBuilderMode}
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    marginBottom: "10px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                    pointerEvents: isBuilderMode ? "none" : "auto",
-                  }}
-                />
-                <input
-                  type="email"
-                  name="Email"
-                  placeholder="Email"
-                  required
-                  disabled={isBuilderMode}
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    marginBottom: "10px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                    pointerEvents: isBuilderMode ? "none" : "auto",
-                  }}
-                />
-              </>
-            )}
+            {element.type === "form" && (element.content?.fields || [{name:'Name', type:'text'}, {name:'Email', type:'email'}]).map((field: any, i: number) => (
+              <input
+                key={i}
+                type={field.type}
+                name={field.name}
+                placeholder={field.name}
+                required
+                disabled={isBuilderMode}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  marginBottom: "10px",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                  pointerEvents: isBuilderMode ? "none" : "auto",
+                }}
+              />
+            ))}
             {element.type === "auth_form" && (
               <>
                 <input

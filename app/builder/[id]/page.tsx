@@ -123,6 +123,7 @@ const SIDEBAR_CATEGORIES = [
     name: "Forms & Auth",
     items: [
       { type: "form", icon: FormInput, label: "Form" },
+      { type: "input", icon: Type, label: "Input" },
       { type: "auth_form", icon: UserPlus, label: "Sign Up / Login" },
       { type: "toggle", icon: ToggleRight, label: "Toggle" },
       { type: "signature", icon: PenTool, label: "Signature" },
@@ -499,6 +500,74 @@ export default function BuilderPage() {
               placeholder="Role"
               className="w-full px-3 py-2 border rounded-md text-sm"
             />
+          </div>
+        );
+
+      case "input":
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Input Type</label>
+              <select
+                className="w-full px-3 py-2 border rounded-md text-sm"
+                value={(selectedElement.content as any)?.type || "text"}
+                onChange={(e) => updateElement(selectedElement.id, {
+                  content: { ...(selectedElement.content as any), type: e.target.value }
+                })}
+              >
+                <option value="text">Text</option>
+                <option value="number">Number</option>
+                <option value="email">Email</option>
+                <option value="password">Password</option>
+                <option value="date">Date</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Placeholder</label>
+              <input
+                type="text"
+                value={(selectedElement.content as any)?.placeholder || ""}
+                onChange={(e) => updateElement(selectedElement.id, {
+                  content: { ...(selectedElement.content as any), placeholder: e.target.value }
+                })}
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Default Value</label>
+              <input
+                type="text"
+                value={(selectedElement.content as any)?.defaultValue || ""}
+                onChange={(e) => updateElement(selectedElement.id, {
+                  content: { ...(selectedElement.content as any), defaultValue: e.target.value }
+                })}
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Name / Key</label>
+              <input
+                type="text"
+                value={(selectedElement.content as any)?.name || ""}
+                onChange={(e) => updateElement(selectedElement.id, {
+                  content: { ...(selectedElement.content as any), name: e.target.value }
+                })}
+                placeholder="e.g. seat_number"
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Save to Variable (on change)</label>
+              <input
+                type="text"
+                value={(selectedElement.content as any)?.saveToVariable || ""}
+                onChange={(e) => updateElement(selectedElement.id, {
+                  content: { ...(selectedElement.content as any), saveToVariable: e.target.value }
+                })}
+                placeholder="e.g. seat_number"
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
           </div>
         );
 

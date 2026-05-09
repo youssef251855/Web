@@ -25,6 +25,7 @@ export type ElementType =
   | "progress"
   | "social"
   | "form"
+  | "input"
   | "table"
   | "code"
   | "avatar"
@@ -221,6 +222,7 @@ const defaultContent: Record<ElementType, any> = {
   progress: 75,
   social: ["twitter", "facebook", "instagram"],
   form: { title: "Contact Us", buttonText: "Submit" },
+  input: { type: "text", placeholder: "Enter text...", defaultValue: "", name: "" },
   table: {
     headers: ["Name", "Age", "City"],
     rows: [
@@ -420,6 +422,12 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
     backgroundColor: "#ffffff",
     borderRadius: "8px",
     border: "1px solid #e5e7eb",
+  },
+  input: {
+    width: "100%",
+    padding: "10px",
+    border: "1px solid #e5e7eb",
+    borderRadius: "6px",
   },
   table: { width: "100%", border: "1px solid #e5e7eb" },
   code: {

@@ -58,10 +58,70 @@ export default function Dashboard() {
     
     let initialElements: any[] = [];
     if (selectedTemplate === 'chat') {
-      initialElements = [
-        { id: Date.now().toString(), type: 'heading', content: 'Customer Support Chat', style: { textAlign: 'center', color: '#ffffff', padding: '20px 0', backgroundColor: '#000000' } },
-        { id: (Date.now() + 1).toString(), type: 'form', content: { title: 'Message Us', buttonText: 'Send Message' }, style: { width: '400px', margin: '0 auto', backgroundColor: '#18181b', padding: '20px', borderRadius: '8px', color: '#fff' } }
-      ];
+      try {
+        const chatFields = [
+          { id: 'f1', name: 'Message', type: 'text' },
+          { id: 'f2', name: 'Sender', type: 'text' }
+        ];
+        const { data: tableData, error: tableError } = await supabase
+          .from('tables')
+          .insert({
+            user_id: user.id,
+            name: newPageTitle + ' Messages',
+            fields: JSON.stringify(chatFields),
+          })
+          .select('id')
+          .single();
+
+        if (tableError) throw tableError;
+        const tableId = tableData.id;
+
+        initialElements = [
+          // Background 
+          { id: Date.now().toString() + 'bg', type: 'divider', content: null, style: { width: '100vw', height: '100vh', backgroundColor: '#efeae2', position: 'fixed', top: 0, left: 0, zIndex: -10 }, position: { x: 0, y: 0 } },
+          
+          // Header (hidden initially)
+          { id: 'chat_header', customId: 'chat_header', type: 'heading', content: 'WhatsApp', style: { display: 'none', backgroundColor: '#075e54', color: '#fff', width: '100%', padding: '16px 24px', position: 'fixed', top: 0, left: 0, zIndex: 10, fontSize: '20px' }, position: { x: 0, y: 0 } },
+          
+          // Login Form
+          {
+            id: 'login_form', customId: 'login_form', type: 'auth_form', 
+            content: { title: 'Welcome to WhatsApp', mode: 'signup', buttonText: 'Sign Up & Chat' },
+            style: { width: '350px', backgroundColor: '#fff', borderRadius: '12px', padding: '30px', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' },
+            position: { x: typeof window !== 'undefined' && window.innerWidth > 768 ? window.innerWidth/2 - 175 : 20, y: 150 },
+            events: [
+              {
+                 id: 'evt_signup', trigger: 'onSubmit', actions: [
+                   { id: 'a1', type: 'ui_hide', params: { elementId: 'login_form' } },
+                   { id: 'a2', type: 'ui_show', params: { elementId: 'chat_header' } },
+                   { id: 'a3', type: 'ui_show', params: { elementId: 'chat_messages' } },
+                   { id: 'a4', type: 'ui_show', params: { elementId: 'message_form' } }
+                 ]
+              }
+            ]
+          },
+          
+          // Chat messages list
+          {
+            id: 'chat_messages', customId: 'chat_messages', type: 'list',
+            content: ["No messages yet"],
+            dataSource: { tableId },
+            style: { display: 'none', listStyleType: 'none', width: '100%', maxWidth: '800px', margin: '0 auto', marginTop: '80px', marginBottom: '100px', padding: '0 20px', border: 'none', backgroundColor: 'transparent' },
+            position: { x: 0, y: 80 }
+          },
+          
+          // Message submit form
+          {
+             id: 'message_form', customId: 'message_form', type: 'form',
+             content: { title: '', buttonText: 'Send', fields: [{ name: 'Message', type: 'text' }] },
+             dataSource: { tableId }, 
+             style: { display: 'none', position: 'fixed', bottom: 0, left: 0, width: '100%', padding: '16px', backgroundColor: '#f0f0f0', borderTop: '1px solid #ccc' },
+             position: { x: 0, y: typeof window !== 'undefined' && window.innerHeight ? window.innerHeight - 150 : 600 }
+          }
+        ];
+      } catch (err) {
+        console.error("Template creation failed:", err);
+      }
     } else if (selectedTemplate === 'store') {
       initialElements = [
         { id: Date.now().toString(), type: 'hero', content: { title: 'Welcome to Our Store', subtitle: 'Browse our latest products below.', buttonText: 'Shop Now' }, style: { backgroundColor: '#18181b', color: '#fff', padding: '60px 20px', textAlign: 'center' } },

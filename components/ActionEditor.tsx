@@ -132,6 +132,17 @@ export default function ActionEditor({ element, updateElement, userPages }: Acti
                   <input type="text" className="w-full text-xs p-1 border rounded" placeholder="New Value" value={act.params.value || ''} onChange={(e) => updateActionParam(idx, 'value', e.target.value)} />
                 </div>
               )}
+              {(act.type === 'ui_hide' || act.type === 'ui_show') && (
+                <div className="space-y-2">
+                  <input type="text" className="w-full text-xs p-1 border rounded" placeholder="Element ID" value={act.params.elementId || ''} onChange={(e) => updateActionParam(idx, 'elementId', e.target.value)} />
+                </div>
+              )}
+              {act.type === 'ui_set_text' && (
+                <div className="space-y-2">
+                  <input type="text" className="w-full text-xs p-1 border rounded" placeholder="Element ID" value={act.params.elementId || ''} onChange={(e) => updateActionParam(idx, 'elementId', e.target.value)} />
+                  <input type="text" className="w-full text-xs p-1 border rounded" placeholder="Text Content" value={act.params.text || ''} onChange={(e) => updateActionParam(idx, 'text', e.target.value)} />
+                </div>
+              )}
               {act.type === 'run_js' && (
                 <textarea 
                   className="w-full text-xs p-1 border rounded font-mono h-24" 

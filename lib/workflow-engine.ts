@@ -169,6 +169,24 @@ export const executeWorkflow = async (
              context.setVariable(step.params.variableId, resolvePayload(step.params.value));
           }
           break;
+        case 'ui_hide':
+          if (step.params.elementId) {
+             const el = document.getElementById(step.params.elementId);
+             if (el) el.style.setProperty('display', 'none', 'important');
+          }
+          break;
+        case 'ui_show':
+          if (step.params.elementId) {
+             const el = document.getElementById(step.params.elementId);
+             if (el) el.style.setProperty('display', 'block', 'important');
+          }
+          break;
+        case 'ui_set_text':
+          if (step.params.elementId && step.params.text !== undefined) {
+             const el = document.getElementById(step.params.elementId);
+             if (el) el.innerText = resolvePayload(step.params.text);
+          }
+          break;
         case 'run_js':
           if (step.params.code) {
              const customFunc = new Function('context', step.params.code);
