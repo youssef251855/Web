@@ -19,9 +19,18 @@ export const executeWorkflow = async (
         // Resolve variable if needed (if leftValue starts with var_ let's evaluate it)
         const resolveValue = (val: string) => {
            if (typeof val === 'string' && val.startsWith('{{') && val.endsWith('}}')) {
-              const varName = val.slice(2, -2).trim();
+              const path = val.slice(2, -2).trim();
+              const parts = path.split('.');
+              const varName = parts[0];
               const found = context.variables.find(v => v.name === varName);
-              return found ? found.defaultValue : val;
+              if (!found) return val;
+              
+              let current: any = found.defaultValue;
+              for (let i = 1; i < parts.length; i++) {
+                if (current == null) break;
+                current = current[parts[i]];
+              }
+              return current;
            }
            return val;
         };
@@ -43,8 +52,19 @@ export const executeWorkflow = async (
       if (typeof obj === 'string') {
         let result = obj;
         context.variables.forEach(v => {
-          const regex = new RegExp(`{{\\s*${v.name}\\s*}}`, 'g');
-          result = result.replace(regex, v.defaultValue?.toString() || '');
+          const regex = new RegExp(`{{\\s*${v.name}(?:\\.[a-zA-Z0-9_]+)*\\s*}}`, 'g');
+          result = result.replace(regex, (match) => {
+            const path = match.replace(/[{}]/g, '').trim();
+            const parts = path.split('.');
+            let current: any = v.defaultValue;
+            for (let i = 1; i < parts.length; i++) {
+              if (current == null) break;
+              current = current[parts[i]];
+            }
+            if (current === undefined || current === null) return "";
+            if (typeof current === 'object') return JSON.stringify(current);
+            return current.toString();
+          });
         });
         return result;
       }
@@ -108,6 +128,25 @@ export const executeWorkflow = async (
           if (step.params.recordId) {
             const { error } = await supabase.from('records').delete().eq('id', step.params.recordId);
             if (error) throw error;
+          }
+          break;
+        case 'db_fetch':
+          if (step.params.tableId) {
+            let query = supabase.from('records').select('*').eq('table_id', step.params.tableId);
+            if (step.params.filterField && step.params.filterValue) {
+               const val = resolvePayload(step.params.filterValue);
+               query = query.eq(`data->>${step.params.filterField}`, val);
+            }
+            const { data, error } = await query;
+            if (error) throw error;
+            if (step.params.saveToVariableId) {
+               const parsedData = data.map(d => typeof d.data === 'string' ? JSON.parse(d.data) : d.data);
+               if (step.params.single) {
+                 context.setVariable(step.params.saveToVariableId, parsedData[0] || null);
+               } else {
+                 context.setVariable(step.params.saveToVariableId, parsedData);
+               }
+            }
           }
           break;
         case 'api_request':

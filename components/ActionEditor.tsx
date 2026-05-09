@@ -102,6 +102,19 @@ export default function ActionEditor({ element, updateElement, userPages }: Acti
                   onChange={(e) => updateActionParam(idx, 'url', e.target.value)}
                 />
               )}
+              {act.type === 'db_fetch' && (
+                <div className="space-y-2">
+                  <input type="text" className="w-full text-xs p-1 border rounded" placeholder="Table ID" value={act.params.tableId || ''} onChange={(e) => updateActionParam(idx, 'tableId', e.target.value)} />
+                  <div className="flex gap-2">
+                    <input type="text" className="w-1/2 text-xs p-1 border rounded" placeholder="Filter Field (e.g. seat_number)" value={act.params.filterField || ''} onChange={(e) => updateActionParam(idx, 'filterField', e.target.value)} />
+                    <input type="text" className="w-1/2 text-xs p-1 border rounded" placeholder="Filter Value (e.g. {{seatNumber}})" value={act.params.filterValue || ''} onChange={(e) => updateActionParam(idx, 'filterValue', e.target.value)} />
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <label className="text-xs flex items-center gap-1"><input type="checkbox" checked={!!act.params.single} onChange={(e) => updateActionParam(idx, 'single', e.target.checked)} /> Single record?</label>
+                    <input type="text" className="flex-1 text-xs p-1 border rounded" placeholder="Save to variable (e.g. currentResult)" value={act.params.saveToVariableId || ''} onChange={(e) => updateActionParam(idx, 'saveToVariableId', e.target.value)} />
+                  </div>
+                </div>
+              )}
               {act.type === 'api_request' && (
                 <div className="space-y-2">
                   <select className="w-full text-xs p-1 border rounded" value={act.params.method || 'GET'} onChange={(e) => updateActionParam(idx, 'method', e.target.value)}>

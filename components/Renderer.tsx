@@ -101,9 +101,26 @@ export default function Renderer({
   const replaceVariablesInText = (text: string | undefined): string => {
     if (!text || typeof text !== "string") return text || "";
     let result = text;
+    
+    // First, map simple variables
     variables.forEach((v) => {
-      const regex = new RegExp(`{{\\s*${v.name}\\s*}}`, "g");
-      result = result.replace(regex, v.defaultValue?.toString() || "");
+      // Find all matches for this specific variable name with possible dot notation
+      const regex = new RegExp(`{{\\s*${v.name}(?:\\.[a-zA-Z0-9_]+)*\\s*}}`, "g");
+      result = result.replace(regex, (match) => {
+        // Extract the full path, e.g., studentResult.name
+        const path = match.replace(/[{}]/g, '').trim();
+        const parts = path.split('.');
+        
+        let current: any = v.defaultValue;
+        for (let i = 1; i < parts.length; i++) {
+          if (current == null) break;
+          current = current[parts[i]];
+        }
+        
+        if (current === undefined || current === null) return "";
+        if (typeof current === 'object') return JSON.stringify(current);
+        return current.toString();
+      });
     });
     return result;
   };
@@ -112,30 +129,40 @@ export default function Renderer({
     e.preventDefault();
     if (isBuilderMode) return;
 
-    if (element.type === "form" && element.dataSource?.tableId && userId) {
+    if (element.type === "form") {
       setIsSubmitting(true);
       setFormSuccess((prev) => ({ ...prev, [element.id]: false }));
       const formData = new FormData(e.target as HTMLFormElement);
       const data: Record<string, any> = {};
       formData.forEach((value, key) => (data[key] = value));
 
-      try {
-        const { error } = await supabase
-          .from('records')
-          .insert({
-            tableId: element.dataSource.tableId,
-            userId,
-            data: JSON.stringify(data),
-          });
-          
-        if (error) throw error;
-        
+      // 1) Set variables from form data so workflow can use it (e.g. {{seat_number}})
+      Object.keys(data).forEach((key) => {
+        setVariable(key, data[key]);
+      });
+
+      // 2) If it's attached to a DB, save it.
+      if (element.dataSource?.tableId && userId) {
+        try {
+          const { error } = await supabase
+            .from('records')
+            .insert({
+              table_id: element.dataSource.tableId,
+              user_id: userId,
+              data: JSON.stringify(data),
+            });
+            
+          if (error) throw error;
+          setFormSuccess((prev) => ({ ...prev, [element.id]: true }));
+          (e.target as HTMLFormElement).reset();
+        } catch (error) {
+          console.error("Error submitting form", error);
+        }
+      } else {
         setFormSuccess((prev) => ({ ...prev, [element.id]: true }));
-        (e.target as HTMLFormElement).reset();
-        await executeElementEvents(element, "onSubmit");
-      } catch (error) {
-        console.error("Error submitting form", error);
       }
+
+      await executeElementEvents(element, "onSubmit");
       setIsSubmitting(false);
     } else if (
       element.type === "auth_form" &&
