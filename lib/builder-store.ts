@@ -69,7 +69,8 @@ export type ElementType =
   | "animated_counter"
   | "tooltip_text"
   | "dropdown_menu"
-  | "range_slider";
+  | "range_slider"
+  | "label";
 
 export interface Position {
   x: number;
@@ -332,6 +333,7 @@ const defaultContent: Record<ElementType, any> = {
     options: ["Option A", "Option B", "Option C"],
   },
   range_slider: { label: "Volume", min: 0, max: 100, value: 50 },
+  label: "Label Text"
 };
 
 const defaultStyle: Record<ElementType, ElementStyle> = {
@@ -636,6 +638,7 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
     width: "200px",
   },
   range_slider: { width: "200px" },
+  label: { fontSize: "14px", color: "#374151", fontWeight: "medium" }
 };
 
 export const useBuilderStore = create<BuilderState>((set) => ({

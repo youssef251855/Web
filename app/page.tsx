@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, Code, Zap, Globe, Layers, Shield, ChevronRight } from 'lucide-react';
+import { ArrowRight, Code, Zap, Globe, Layers, Shield, ChevronRight, PenTool, Sparkles, Smartphone, LayoutTemplate, Database } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -95,7 +95,7 @@ export default function Home() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+            className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16"
           >
             <Link
               href="/login"
@@ -112,6 +112,34 @@ export default function Home() {
               </svg>
               Continue with Google
             </button>
+          </motion.div>
+
+          <motion.div
+             initial={{ opacity: 0, y: 40 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ duration: 0.7, delay: 0.4 }}
+             className="relative max-w-4xl mx-auto rounded-xl overflow-hidden border border-zinc-800 shadow-2xl"
+          >
+            <div className="bg-zinc-900 border-b border-zinc-800 px-4 py-3 flex items-center gap-2">
+               <div className="w-3 h-3 rounded-full bg-red-500"></div>
+               <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+               <div className="w-3 h-3 rounded-full bg-green-500"></div>
+               <div className="ml-4 text-xs text-zinc-500 font-mono">شرح منصة Joex</div>
+            </div>
+            <div className="aspect-video bg-black relative">
+              <video 
+                controls 
+                autoPlay
+                muted
+                loop
+                controlsList="nodownload"
+                onContextMenu={(e) => e.preventDefault()}
+                className="w-full h-full object-cover"
+                src="https://d.top4top.io/m_37816o9t70.mp4"
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
           </motion.div>
         </div>
       </section>
@@ -139,6 +167,41 @@ export default function Home() {
               <Layers className="w-8 h-8 text-blue-500 mb-6" />
               <h3 className="text-xl font-semibold mb-3 text-white">Dynamic Data</h3>
               <p className="text-zinc-400">Connect to built-in databases to build user authentication flows and dynamic content lists easily.</p>
+            </div>
+            <div className="p-8 border border-zinc-800 bg-[#000000] rounded-2xl hover:border-zinc-700 transition duration-300">
+              <Globe className="w-8 h-8 text-blue-500 mb-6" />
+              <h3 className="text-xl font-semibold mb-3 text-white">Global Reach</h3>
+              <p className="text-zinc-400">Scale globally instantly with our edge network infrastructure and built-in CDN routing.</p>
+            </div>
+            <div className="p-8 border border-zinc-800 bg-[#000000] rounded-2xl hover:border-zinc-700 transition duration-300">
+              <Shield className="w-8 h-8 text-blue-500 mb-6" />
+              <h3 className="text-xl font-semibold mb-3 text-white">Enterprise Security</h3>
+              <p className="text-zinc-400">Rest easy with enterprise-grade security, data encryption, and automatic backups built-in.</p>
+            </div>
+            <div className="p-8 border border-zinc-800 bg-[#000000] rounded-2xl hover:border-zinc-700 transition duration-300">
+              <PenTool className="w-8 h-8 text-blue-500 mb-6" />
+              <h3 className="text-xl font-semibold mb-3 text-white">Visual Styling</h3>
+              <p className="text-zinc-400">Edit typography, colors, borders, and effects with an intuitive visual inspector.</p>
+            </div>
+            <div className="p-8 border border-zinc-800 bg-[#000000] rounded-2xl hover:border-zinc-700 transition duration-300">
+              <Sparkles className="w-8 h-8 text-blue-500 mb-6" />
+              <h3 className="text-xl font-semibold mb-3 text-white">AI Assistant</h3>
+              <p className="text-zinc-400">Generate copy, fix layouts, and build complex components through AI-powered suggestions.</p>
+            </div>
+            <div className="p-8 border border-zinc-800 bg-[#000000] rounded-2xl hover:border-zinc-700 transition duration-300">
+              <Smartphone className="w-8 h-8 text-blue-500 mb-6" />
+              <h3 className="text-xl font-semibold mb-3 text-white">Fully Responsive</h3>
+              <p className="text-zinc-400">Your sites automatically look great on desktops, tablets, and phones, out of the box.</p>
+            </div>
+            <div className="p-8 border border-zinc-800 bg-[#000000] rounded-2xl hover:border-zinc-700 transition duration-300">
+              <LayoutTemplate className="w-8 h-8 text-blue-500 mb-6" />
+              <h3 className="text-xl font-semibold mb-3 text-white">Smart Templates</h3>
+              <p className="text-zinc-400">Kickstart your project with high-converting, accessible templates covering any use case.</p>
+            </div>
+            <div className="p-8 border border-zinc-800 bg-[#000000] rounded-2xl hover:border-zinc-700 transition duration-300">
+              <Database className="w-8 h-8 text-blue-500 mb-6" />
+              <h3 className="text-xl font-semibold mb-3 text-white">Headless CMS</h3>
+              <p className="text-zinc-400">Manage your content in one place and sync it everywhere instantly through powerful APIs.</p>
             </div>
           </div>
         </div>

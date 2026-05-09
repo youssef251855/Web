@@ -40,7 +40,7 @@ export default function Renderer({
       for (const el of elements) {
         if (
           el.dataSource?.tableId &&
-          (el.type === "list" || el.type === "table")
+          (el.type === "list" || el.type === "table" || el.type === "text" || el.type === "image" || el.type === "label")
         ) {
           try {
             const { data, error } = await supabase
@@ -98,11 +98,29 @@ export default function Renderer({
     });
   }, [elements, isBuilderMode, executeElementEvents]);
 
-  const replaceVariablesInText = (text: string | undefined): string => {
+  const replaceVariablesInText = (text: string | undefined, localContext: any = {}): string => {
     if (!text || typeof text !== "string") return text || "";
     let result = text;
     
-    // First, map simple variables
+    // Process local context first
+    if (localContext && typeof localContext === 'object') {
+      const regex = new RegExp(`{{\\s*(?:CurrentItem\\.)?([a-zA-Z0-9_]+(?:\\.[a-zA-Z0-9_]+)*)\\s*}}`, "g");
+      result = result.replace(regex, (match, path) => {
+        const parts = path.split('.');
+        let current: any = localContext;
+        for (let i = 0; i < parts.length; i++) {
+          if (current == null) break;
+          current = current[parts[i]];
+        }
+        if (current !== undefined && current !== null) {
+          if (typeof current === 'object') return JSON.stringify(current);
+          return current.toString();
+        }
+        return match; // Leave it for global variables if not found
+      });
+    }
+
+    // Then, map simple global variables
     variables.forEach((v) => {
       // Find all matches for this specific variable name with possible dot notation
       const regex = new RegExp(`{{\\s*${v.name}(?:\\.[a-zA-Z0-9_]+)*\\s*}}`, "g");
@@ -245,10 +263,18 @@ export default function Renderer({
     // Though it belongs in Effect, for declarative builder simple triggers can be invoked at hydration wrapper
 
     switch (element.type) {
+      case "label":
+        const labelLocalContext = dataSources[element.id]?.[0] || {};
+        return (
+          <label id={element.customId} style={elStyle} className={`block mb-1 ${customClass}`}>
+            {replaceVariablesInText(element.content, labelLocalContext)}
+          </label>
+        );
       case "text":
+        const textLocalContext = dataSources[element.id]?.[0] || {};
         return (
           <p id={element.customId} style={elStyle} className={customClass}>
-            {replaceVariablesInText(element.content)}
+            {replaceVariablesInText(element.content, textLocalContext)}
           </p>
         );
       case "heading":
@@ -281,10 +307,18 @@ export default function Renderer({
           />
         );
       case "image":
+        const imgLocalContext = dataSources[element.id]?.[0] || {};
+        const imgSrc = replaceVariablesInText(element.content, imgLocalContext);
+        let finalImgSrc = imgSrc;
+        if (dataSources[element.id]?.[0] && imgSrc === element.content && element.dataSource?.tableId) {
+            const recordValues = Object.values(imgLocalContext);
+            const foundUrl = recordValues.find(v => typeof v === 'string' && v.startsWith('http'));
+            if (foundUrl) finalImgSrc = foundUrl as string;
+        }
         return (
           <img
             id={element.customId}
-            src={element.content}
+            src={finalImgSrc}
             alt=""
             style={elStyle}
             className={`object-cover ${customClass}`}

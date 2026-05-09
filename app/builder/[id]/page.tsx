@@ -124,6 +124,7 @@ const SIDEBAR_CATEGORIES = [
     items: [
       { type: "form", icon: FormInput, label: "Form" },
       { type: "input", icon: Type, label: "Input" },
+      { type: "label", icon: Type, label: "Label" },
       { type: "auth_form", icon: UserPlus, label: "Sign Up / Login" },
       { type: "toggle", icon: ToggleRight, label: "Toggle" },
       { type: "signature", icon: PenTool, label: "Signature" },
@@ -1327,14 +1328,15 @@ export default function BuilderPage() {
         );
       case "code":
       case "quote":
+      case "text":
         return (
           <textarea
             value={selectedElement.content as string}
             onChange={(e) =>
               updateElement(selectedElement.id, { content: e.target.value })
             }
-            className="w-full px-3 py-2 border rounded-md text-sm font-mono"
-            rows={6}
+            className={`w-full px-3 py-2 border rounded-md text-sm ${selectedElement.type === 'code' ? 'font-mono' : ''}`}
+            rows={selectedElement.type === 'text' ? 4 : 6}
           />
         );
       case "image":
@@ -1748,7 +1750,10 @@ export default function BuilderPage() {
 
                   {/* Database Connection */}
                   {(selectedElement.type === "list" ||
-                    selectedElement.type === "form") && (
+                    selectedElement.type === "form" ||
+                    selectedElement.type === "text" ||
+                    selectedElement.type === "image" ||
+                    selectedElement.type === "label") && (
                     <div className="space-y-4 mt-4 border-t pt-4">
                       <h3 className="text-sm font-medium text-gray-900">
                         Database Connection
@@ -1774,6 +1779,14 @@ export default function BuilderPage() {
                           ))}
                         </select>
                       </div>
+                      {selectedElement.dataSource?.tableId &&
+                        (selectedElement.type === "text" || 
+                         selectedElement.type === "label" || 
+                         selectedElement.type === "image") && (
+                          <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded-md border border-blue-100 mt-2">
+                            Bind single record. Example: Use <b>{"{{CurrentItem.field_name}}"}</b> in content to render the value.
+                          </div>
+                      )}
                       {selectedElement.dataSource?.tableId &&
                         selectedElement.type === "list" && (
                           <div className="text-xs text-green-600 bg-green-50 p-2 rounded-md border border-green-100">

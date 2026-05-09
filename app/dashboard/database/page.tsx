@@ -25,9 +25,13 @@ export default function DatabasePage() {
   const [selectedTable, setSelectedTable] = useState<Table | null>(null);
   const [newTableName, setNewTableName] = useState('');
   const [isCreatingTable, setIsCreatingTable] = useState(false);
+  const [viewMode, setViewMode] = useState<'schema' | 'data'>('schema');
+  const [records, setRecords] = useState<any[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(false);
 
   useEffect(() => {
     const fetchTables = async () => {
+
       if (!user) return;
       try {
         const { data, error } = await supabase
@@ -53,6 +57,36 @@ export default function DatabasePage() {
     };
     fetchTables();
   }, [user]);
+
+  useEffect(() => {
+    const fetchTableRecords = async () => {
+      if (viewMode === 'data' && selectedTable) {
+        setLoadingRecords(true);
+        try {
+          const { data, error } = await supabase
+            .from('records')
+            .select('*')
+            .eq('table_id', selectedTable.id);
+            
+          if (error) throw error;
+          
+          const parsedRecords = data.map(record => ({
+            id: record.id,
+            created_at: record.created_at,
+            ...(typeof record.data === 'string' ? JSON.parse(record.data) : record.data)
+          }));
+          
+          setRecords(parsedRecords);
+        } catch (error) {
+          console.error("Error fetching records", error);
+        } finally {
+          setLoadingRecords(false);
+        }
+      }
+    };
+    
+    fetchTableRecords();
+  }, [viewMode, selectedTable]);
 
   const handleCreateTable = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -241,88 +275,137 @@ export default function DatabasePage() {
       <div className="flex-1 bg-gray-50 flex flex-col h-full overflow-hidden">
         {selectedTable ? (
           <>
-            <div className="bg-white border-b px-8 py-6 flex justify-between items-center shrink-0">
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">{selectedTable.name} Schema</h1>
-                <p className="text-sm text-gray-500 mt-1">Define the fields and data types for this collection.</p>
+            <div className="bg-white border-b px-8 py-6 flex flex-col shrink-0 gap-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-900">{selectedTable.name}</h1>
+                  <p className="text-sm text-gray-500 mt-1">Manage schema and data for this collection.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept=".json"
+                    id={`import-json-${selectedTable.id}`}
+                    className="hidden"
+                    onChange={handleImportJson}
+                  />
+                  <button
+                    onClick={() => document.getElementById(`import-json-${selectedTable.id}`)?.click()}
+                    className="text-gray-700 hover:bg-gray-100 px-3 py-2 rounded-md transition flex items-center text-sm font-medium border"
+                  >
+                    <Upload className="w-4 h-4 mr-2" /> Import JSON
+                  </button>
+                  <button 
+                    onClick={handleDeleteTable}
+                    className="text-red-600 hover:bg-red-50 px-3 py-2 rounded-md transition flex items-center text-sm font-medium"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" /> Delete Collection
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="file"
-                  accept=".json"
-                  id={`import-json-${selectedTable.id}`}
-                  className="hidden"
-                  onChange={handleImportJson}
-                />
+              <div className="flex items-center gap-4 border-b">
                 <button
-                  onClick={() => document.getElementById(`import-json-${selectedTable.id}`)?.click()}
-                  className="text-gray-700 hover:bg-gray-100 px-3 py-2 rounded-md transition flex items-center text-sm font-medium border"
+                  className={`px-4 py-2 border-b-2 font-medium text-sm transition-colors ${viewMode === 'schema' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                  onClick={() => setViewMode('schema')}
                 >
-                  <Upload className="w-4 h-4 mr-2" /> Import JSON
+                  Schema
                 </button>
-                <button 
-                  onClick={handleDeleteTable}
-                  className="text-red-600 hover:bg-red-50 px-3 py-2 rounded-md transition flex items-center text-sm font-medium"
+                <button
+                  className={`px-4 py-2 border-b-2 font-medium text-sm transition-colors ${viewMode === 'data' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}
+                  onClick={() => setViewMode('data')}
                 >
-                  <Trash2 className="w-4 h-4 mr-2" /> Delete Collection
+                  Data
                 </button>
               </div>
             </div>
             
             <div className="flex-1 overflow-y-auto p-8">
-              <div className="max-w-3xl mx-auto bg-white rounded-xl border shadow-sm overflow-hidden">
-                <div className="bg-gray-50 px-6 py-3 border-b flex items-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  <div className="w-1/2">Property Name</div>
-                  <div className="w-1/3">Property Type</div>
-                  <div className="w-1/6 text-right">Actions</div>
-                </div>
-                
-                <div className="divide-y">
-                  {selectedTable.fields.map(field => (
-                    <div key={field.id} className="p-6 flex items-start gap-6 hover:bg-gray-50/50 transition">
-                      <div className="w-1/2">
-                        <input
-                          type="text"
-                          value={field.name}
-                          onChange={(e) => updateField(field.id, { name: e.target.value })}
-                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                          placeholder="Field name"
-                        />
+              {viewMode === 'schema' ? (
+                <div className="max-w-3xl mx-auto bg-white rounded-xl border shadow-sm overflow-hidden">
+                  <div className="bg-gray-50 px-6 py-3 border-b flex items-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <div className="w-1/2">Property Name</div>
+                    <div className="w-1/3">Property Type</div>
+                    <div className="w-1/6 text-right">Actions</div>
+                  </div>
+                  
+                  <div className="divide-y">
+                    {selectedTable.fields.map(field => (
+                      <div key={field.id} className="p-6 flex items-start gap-6 hover:bg-gray-50/50 transition">
+                        <div className="w-1/2">
+                          <input
+                            type="text"
+                            value={field.name}
+                            onChange={(e) => updateField(field.id, { name: e.target.value })}
+                            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            placeholder="Field name"
+                          />
+                        </div>
+                        <div className="w-1/3">
+                          <select
+                            value={field.type}
+                            onChange={(e) => updateField(field.id, { type: e.target.value as any })}
+                            className="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
+                          >
+                            <option value="text">Text / String</option>
+                            <option value="number">Number</option>
+                            <option value="boolean">True / False</option>
+                            <option value="date">Date</option>
+                          </select>
+                        </div>
+                        <div className="w-1/6 flex justify-end">
+                          <button
+                            onClick={() => removeField(field.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition"
+                            title="Remove field"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                      <div className="w-1/3">
-                        <select
-                          value={field.type}
-                          onChange={(e) => updateField(field.id, { type: e.target.value as any })}
-                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-white"
-                        >
-                          <option value="text">Text / String</option>
-                          <option value="number">Number</option>
-                          <option value="boolean">True / False</option>
-                          <option value="date">Date</option>
-                        </select>
-                      </div>
-                      <div className="w-1/6 flex justify-end">
-                        <button
-                          onClick={() => removeField(field.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition"
-                          title="Remove field"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
 
-                <div className="p-6 bg-gray-50 border-t">
-                  <button
-                    onClick={addField}
-                    className="flex items-center text-blue-600 font-medium hover:text-blue-700"
-                  >
-                    <ListPlus className="w-4 h-4 mr-2" /> Add Property
-                  </button>
+                  <div className="p-6 bg-gray-50 border-t">
+                    <button
+                      onClick={addField}
+                      className="flex items-center text-blue-600 font-medium hover:text-blue-700"
+                    >
+                      <ListPlus className="w-4 h-4 mr-2" /> Add Property
+                    </button>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="w-full bg-white rounded-xl border shadow-sm overflow-hidden overflow-x-auto">
+                   {loadingRecords ? (
+                     <div className="p-8 text-center text-gray-500">Loading records...</div>
+                   ) : records.length === 0 ? (
+                     <div className="p-8 text-center text-gray-500">No records found. Start adding data in your app!</div>
+                   ) : (
+                     <table className="w-full text-left text-sm whitespace-nowrap">
+                       <thead className="bg-gray-50 border-b">
+                         <tr>
+                           <th className="px-6 py-3 font-semibold text-gray-600">ID</th>
+                           <th className="px-6 py-3 font-semibold text-gray-600">Created At</th>
+                           {selectedTable.fields.map(field => (
+                             <th key={field.id} className="px-6 py-3 font-semibold text-gray-600">{field.name}</th>
+                           ))}
+                         </tr>
+                       </thead>
+                       <tbody className="divide-y">
+                         {records.map((record) => (
+                           <tr key={record.id} className="hover:bg-gray-50/50">
+                             <td className="px-6 py-4 font-mono text-xs text-gray-500">{record.id}</td>
+                             <td className="px-6 py-4 text-gray-500">{new Date(record.created_at).toLocaleString()}</td>
+                             {selectedTable.fields.map(field => (
+                               <td key={field.id} className="px-6 py-4 truncate max-w-xs">{String(record[field.name] ?? '-')}</td>
+                             ))}
+                           </tr>
+                         ))}
+                       </tbody>
+                     </table>
+                   )}
+                </div>
+              )}
             </div>
           </>
         ) : (
