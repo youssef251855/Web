@@ -163,6 +163,49 @@ export default function DatabasePage() {
     }
   };
 
+  const [isAddingRecord, setIsAddingRecord] = useState(false);
+  const [newRecordData, setNewRecordData] = useState<any>({});
+
+  const handleOpenAddRecord = () => {
+    if (!selectedTable) return;
+    const defaultData = selectedTable.fields.reduce((acc, field) => {
+        acc[field.name] = '';
+        return acc;
+    }, {} as any);
+    setNewRecordData(defaultData);
+    setIsAddingRecord(true);
+  };
+
+  const handleAddRecord = async () => {
+    if (!selectedTable || !user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('records')
+        .insert({
+          table_id: selectedTable.id,
+          user_id: user.id,
+          data: JSON.stringify(newRecordData),
+        })
+        .select('*')
+        .single();
+        
+      if (error) throw error;
+      
+      const newRecord = {
+          id: data.id,
+          created_at: data.created_at,
+          ...newRecordData
+      };
+      
+      setRecords([...records, newRecord]);
+      setIsAddingRecord(false);
+    } catch (error) {
+       console.error("Error adding record", error);
+       alert("Failed to add record.");
+    }
+  };
+
   const handleImportJson = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!selectedTable || !user) return;
     const file = e.target.files?.[0];
@@ -282,6 +325,14 @@ export default function DatabasePage() {
                   <p className="text-sm text-gray-500 mt-1">Manage schema and data for this collection.</p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {viewMode === 'data' && (
+                    <button 
+                      onClick={handleOpenAddRecord}
+                      className="text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md transition flex items-center text-sm font-medium border border-blue-200"
+                    >
+                      <Plus className="w-4 h-4 mr-2" /> Add Record
+                    </button>
+                  )}
                   <input
                     type="file"
                     accept=".json"
@@ -319,6 +370,30 @@ export default function DatabasePage() {
               </div>
             </div>
             
+            {/* Modal for adding record */}
+            {isAddingRecord && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-lg">
+                  <h2 className="text-lg font-bold mb-4">Add Record to {selectedTable.name}</h2>
+                  {selectedTable.fields.map(field => (
+                    <div key={field.id} className="mb-4">
+                      <label className="block text-sm font-medium mb-1">{field.name}</label>
+                      <input
+                        type={field.type === 'number' ? 'number' : 'text'}
+                        value={newRecordData[field.name] || ''}
+                        onChange={(e) => setNewRecordData({...newRecordData, [field.name]: e.target.value})}
+                        className="w-full border rounded p-2"
+                      />
+                    </div>
+                  ))}
+                  <div className="flex justify-end gap-2">
+                    <button onClick={() => setIsAddingRecord(false)} className="px-4 py-2 border rounded">Cancel</button>
+                    <button onClick={handleAddRecord} className="px-4 py-2 bg-blue-600 text-white rounded">Add Record</button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="flex-1 overflow-y-auto p-8">
               {viewMode === 'schema' ? (
                 <div className="max-w-3xl mx-auto bg-white rounded-xl border shadow-sm overflow-hidden">
@@ -329,8 +404,8 @@ export default function DatabasePage() {
                   </div>
                   
                   <div className="divide-y">
-                    {selectedTable.fields.map(field => (
-                      <div key={field.id} className="p-6 flex items-start gap-6 hover:bg-gray-50/50 transition">
+                    {selectedTable.fields.map((field, i) => (
+                      <div key={`${field.id}-${i}`} className="p-6 flex items-start gap-6 hover:bg-gray-50/50 transition">
                         <div className="w-1/2">
                           <input
                             type="text"
@@ -392,12 +467,12 @@ export default function DatabasePage() {
                          </tr>
                        </thead>
                        <tbody className="divide-y">
-                         {records.map((record) => (
-                           <tr key={record.id} className="hover:bg-gray-50/50">
+                         {records.map((record, index) => (
+                           <tr key={`${record.id}-${index}`} className="hover:bg-gray-50/50">
                              <td className="px-6 py-4 font-mono text-xs text-gray-500">{record.id}</td>
                              <td className="px-6 py-4 text-gray-500">{new Date(record.created_at).toLocaleString()}</td>
-                             {selectedTable.fields.map(field => (
-                               <td key={field.id} className="px-6 py-4 truncate max-w-xs">{String(record[field.name] ?? '-')}</td>
+                             {selectedTable.fields.map((field, i) => (
+                               <td key={`cell-${record.id}-${field.id}-${i}`} className="px-6 py-4 truncate max-w-xs">{String(record[field.name] ?? '-')}</td>
                              ))}
                            </tr>
                          ))}

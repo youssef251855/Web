@@ -10,7 +10,7 @@ interface AuthContextType {
   username: string | null;
   signIn: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
-  signUpWithEmail: (email: string, password: string) => Promise<{ user: User | null; session: any | null }>;
+  signUpWithEmail: (email: string, password: string, name: string) => Promise<{ user: User | null; session: any | null }>;
   logout: () => Promise<void>;
   setUsername: (username: string) => Promise<void>;
 }
@@ -21,7 +21,7 @@ const AuthContext = createContext<AuthContextType>({
   username: null,
   signIn: async () => {},
   signInWithEmail: async () => {},
-  signUpWithEmail: async () => ({ user: null, session: null }),
+  signUpWithEmail: async (email, password, name) => ({ user: null, session: null }),
   logout: async () => {},
   setUsername: async () => {},
 });
@@ -83,13 +83,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) throw error;
   };
 
-  const signUpWithEmail = async (email: string, password: string) => {
+  const signUpWithEmail = async (email: string, password: string, name: string) => {
     const { data, error } = await supabase.auth.signUp({ 
       email, 
       password,
-      options: { emailRedirectTo: window.location.origin }
+      options: { 
+        emailRedirectTo: window.location.origin,
+        data: { username: name }
+      }
     });
+
     if (error) throw error;
+    
+    if (data.user) {
+        await supabase.from('site_users').upsert({
+            id: data.user.id,
+            email: data.user.email,
+            name: name,
+            role: 'user', // Default role
+            owner_id: data.user.id // Assuming it needs an owner, using self as owner
+        });
+    }
+
     return data;
   };
 

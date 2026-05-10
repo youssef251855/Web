@@ -58,10 +58,12 @@ import {
   ToggleRight,
   PenTool,
   UserPlus,
+  Download,
 } from "lucide-react";
 import CloudinaryUploadWidget from "@/components/CloudinaryUploadWidget";
 import ActionEditor from "@/components/ActionEditor";
 import Renderer from "@/components/Renderer";
+import ExportCodeModal from "@/components/ExportCodeModal";
 
 const SIDEBAR_CATEGORIES = [
   {
@@ -209,6 +211,7 @@ export default function BuilderPage() {
   const [pageDescription, setPageDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [topTab, setTopTab] = useState<
     "editor" | "database" | "users" | "settings"
@@ -293,14 +296,27 @@ export default function BuilderPage() {
         .select("*")
         .eq("user_id", user.id);
         
+      let tables: any[] = [];
       if (snapTables) {
-        const tables = snapTables.map((d: any) => ({
+        tables = snapTables.map((d: any) => ({
           id: d.id,
           name: d.name,
           fields: typeof d.fields === 'string' ? JSON.parse(d.fields || "[]") : d.fields,
         }));
-        setUserTables(tables);
       }
+
+      // Add site_users as an available table
+      tables.push({
+        id: 'site_users',
+        name: 'Users',
+        fields: [
+          { name: 'id', type: 'text' },
+          { name: 'email', type: 'text' },
+          { name: 'name', type: 'text' },
+          { name: 'role', type: 'text' },
+        ]
+      });
+      setUserTables(tables);
 
       const { data: settingsSnap } = await supabase
         .from("user_settings")
@@ -315,7 +331,7 @@ export default function BuilderPage() {
     fetchUserPagesAndTables();
   }, [user]);
 
-  const handleSave = async () => {
+  const handleSave = async (showSuccessAlert = false) => {
     if (!user || !id) return;
     setSaving(true);
     try {
@@ -332,10 +348,15 @@ export default function BuilderPage() {
         
       if (error) throw error;
       
-      alert('Page saved successfully!');
+      if (showSuccessAlert) {
+         // Optionally use UI toast instead of alert for better UX, but simple alert is fine for manual clicks
+         console.log('Page saved successfully!');
+      }
     } catch (error: any) {
       console.error("Error saving page", error);
-      alert('Error saving page: ' + error.message);
+      if (showSuccessAlert) {
+         alert('Error saving page: ' + error.message);
+      }
     } finally {
       setSaving(false);
     }
@@ -387,6 +408,7 @@ export default function BuilderPage() {
         return;
       }
       if (
+        !prevState ||
         state.elements !== prevState.elements ||
         state.variables !== prevState.variables
       ) {
@@ -1460,7 +1482,13 @@ export default function BuilderPage() {
             Preview
           </a>
           <button
-            onClick={handleSave}
+            onClick={() => setIsExportModalOpen(true)}
+            className="bg-purple-600 text-white px-4 py-2 rounded-md flex items-center text-sm hover:bg-purple-700 transition"
+          >
+            <Download className="w-4 h-4 mr-2" /> Export
+          </button>
+          <button
+            onClick={() => handleSave(true)}
             disabled={saving}
             className="bg-blue-600 text-white px-4 py-2 rounded-md flex items-center text-sm hover:bg-blue-700 disabled:opacity-50 transition"
           >
@@ -1642,14 +1670,14 @@ export default function BuilderPage() {
                       Style
                     </h3>
 
-                    {selectedElement.style.color !== undefined && (
+                    {selectedElement.style?.color !== undefined && (
                       <div>
                         <label className="block text-xs text-gray-600 mb-1">
                           Text Color
                         </label>
                         <input
                           type="color"
-                          value={selectedElement.style.color}
+                          value={selectedElement.style?.color || '#000000'}
                           onChange={(e) =>
                             updateElement(selectedElement.id, {
                               style: {
@@ -1663,14 +1691,14 @@ export default function BuilderPage() {
                       </div>
                     )}
 
-                    {selectedElement.style.backgroundColor !== undefined && (
+                    {selectedElement.style?.backgroundColor !== undefined && (
                       <div>
                         <label className="block text-xs text-gray-600 mb-1">
                           Background Color
                         </label>
                         <input
                           type="color"
-                          value={selectedElement.style.backgroundColor}
+                          value={selectedElement.style?.backgroundColor || '#ffffff'}
                           onChange={(e) =>
                             updateElement(selectedElement.id, {
                               style: {
@@ -1684,14 +1712,14 @@ export default function BuilderPage() {
                       </div>
                     )}
 
-                    {selectedElement.style.fontSize !== undefined && (
+                    {selectedElement.style?.fontSize !== undefined && (
                       <div>
                         <label className="block text-xs text-gray-600 mb-1">
                           Font Size
                         </label>
                         <input
                           type="text"
-                          value={selectedElement.style.fontSize}
+                          value={selectedElement.style?.fontSize || '16px'}
                           onChange={(e) =>
                             updateElement(selectedElement.id, {
                               style: {
@@ -1705,14 +1733,14 @@ export default function BuilderPage() {
                       </div>
                     )}
 
-                    {selectedElement.style.width !== undefined && (
+                    {selectedElement.style?.width !== undefined && (
                       <div>
                         <label className="block text-xs text-gray-600 mb-1">
                           Width
                         </label>
                         <input
                           type="text"
-                          value={selectedElement.style.width}
+                          value={selectedElement.style?.width || '100%'}
                           onChange={(e) =>
                             updateElement(selectedElement.id, {
                               style: {
@@ -1726,14 +1754,14 @@ export default function BuilderPage() {
                       </div>
                     )}
 
-                    {selectedElement.style.height !== undefined && (
+                    {selectedElement.style?.height !== undefined && (
                       <div>
                         <label className="block text-xs text-gray-600 mb-1">
                           Height
                         </label>
                         <input
                           type="text"
-                          value={selectedElement.style.height}
+                          value={selectedElement.style?.height || 'auto'}
                           onChange={(e) =>
                             updateElement(selectedElement.id, {
                               style: {
@@ -1753,6 +1781,8 @@ export default function BuilderPage() {
                     selectedElement.type === "form" ||
                     selectedElement.type === "text" ||
                     selectedElement.type === "image" ||
+                    selectedElement.type === "exam_result_lookup" ||
+                    selectedElement.type === "search" ||
                     selectedElement.type === "label") && (
                     <div className="space-y-4 mt-4 border-t pt-4">
                       <h3 className="text-sm font-medium text-gray-900">
@@ -1837,6 +1867,38 @@ export default function BuilderPage() {
                             .
                           </div>
                         )}
+                      {selectedElement.dataSource?.tableId &&
+                        selectedElement.type === "exam_result_lookup" && (
+                          <div className="text-xs text-green-600 bg-green-50 p-2 rounded-md border border-green-100">
+                            Exam Lookup linked to{" "}
+                            <b>
+                              {
+                                userTables.find(
+                                  (t) =>
+                                    t.id ===
+                                    selectedElement.dataSource?.tableId,
+                                )?.name
+                              }
+                            </b>
+                            . Ensure your table has fields: <i>student_name, seat_number, total_score, max_score, percentage, status</i>.
+                          </div>
+                        )}
+                      {selectedElement.dataSource?.tableId &&
+                        selectedElement.type === "search" && (
+                          <div className="text-xs text-green-600 bg-green-50 p-2 rounded-md border border-green-100 mt-2">
+                            Search Element linked to{" "}
+                            <b>
+                              {
+                                userTables.find(
+                                  (t) =>
+                                    t.id ===
+                                    selectedElement.dataSource?.tableId,
+                                )?.name
+                              }
+                            </b>
+                            . It will search across all text fields of this collection.
+                          </div>
+                        )}
                     </div>
                   )}
 
@@ -1845,6 +1907,7 @@ export default function BuilderPage() {
                     element={selectedElement}
                     updateElement={updateElement}
                     userPages={userPages}
+                    userTables={userTables}
                   />
 
                   {/* Advanced UI: Custom JS and CSS */}
@@ -1996,7 +2059,7 @@ export default function BuilderPage() {
 
               <div className="pt-4 border-t">
                 <button
-                  onClick={handleSave}
+                  onClick={() => handleSave(true)}
                   disabled={saving}
                   className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
                 >
@@ -2098,6 +2161,15 @@ export default function BuilderPage() {
           </div>
         </div>
       )}
+
+      {/* Export Code Modal */}
+      <ExportCodeModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        elements={useBuilderStore.getState().elements}
+        variables={variables}
+        slug={pageSlug}
+      />
     </div>
   );
 }

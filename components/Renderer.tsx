@@ -4,6 +4,8 @@ import { PageElement, AppVariable } from "@/lib/builder-store";
 import { executeWorkflow } from "@/lib/workflow-engine";
 import { supabase } from "@/lib/supabase";
 import { Star } from "lucide-react";
+import ExamResultLookup from "./templates/ExamResultLookup";
+import DataSearch from "./templates/DataSearch";
 
 interface RendererProps {
   elements: PageElement[];
@@ -59,15 +61,26 @@ export default function Renderer({
           (el.type === "list" || el.type === "table" || el.type === "text" || el.type === "image" || el.type === "label")
         ) {
           try {
-            const { data, error } = await supabase
-              .from('records')
-              .select('data')
-              .eq('table_id', el.dataSource.tableId)
-              .eq('user_id', userId);
-              
-            if (error) throw error;
-            if (data) {
-              sources[el.id] = data.map((d: any) => typeof d.data === 'string' ? JSON.parse(d.data) : d.data);
+            if (el.dataSource.tableId === 'site_users') {
+                const { data, error } = await supabase
+                  .from('site_users')
+                  .select('*')
+                  .eq('owner_id', userId);
+                if (error) throw error;
+                if (data) {
+                  sources[el.id] = data;
+                }
+            } else {
+                const { data, error } = await supabase
+                  .from('records')
+                  .select('data')
+                  .eq('table_id', el.dataSource.tableId)
+                  .eq('user_id', userId);
+                  
+                if (error) throw error;
+                if (data) {
+                  sources[el.id] = data.map((d: any) => typeof d.data === 'string' ? JSON.parse(d.data) : d.data);
+                }
             }
           } catch (e) {
             console.error("Data fetch error for element", el.id, e);
@@ -690,6 +703,16 @@ export default function Renderer({
                   )}
             </button>
           </form>
+        );
+      case "exam_result_lookup":
+        return (
+          <ExamResultLookup tableId={element.dataSource?.tableId || ''} />
+        );
+      case "search":
+        return (
+          <div id={element.customId} style={elStyle} className={`${customClass} bg-white shadow-xl min-h-[400px] border border-zinc-200 rounded-xl overflow-hidden`}>
+            <DataSearch tableId={element.dataSource?.tableId || ''} placeholder={element.content?.placeholder || 'Search by any field...'} />
+          </div>
         );
       case "table":
         return (

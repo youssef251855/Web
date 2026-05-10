@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -35,7 +36,7 @@ export default function LoginPage() {
         await signInWithEmail(email, password);
         router.push('/dashboard');
       } else {
-        const data = await signUpWithEmail(email, password);
+        const data = await signUpWithEmail(email, password, name);
         if (data.session) {
           router.push('/dashboard');
         } else {
@@ -118,6 +119,25 @@ export default function LoginPage() {
                     />
                   </div>
                 </div>
+
+                {!isLogin && (
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-300 mb-1.5" htmlFor="name">
+                      Name
+                    </label>
+                    <div className="relative">
+                      <input
+                        id="name"
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="John Doe"
+                        required
+                        className="w-full bg-[#000000] border border-zinc-800 rounded-xl py-3 px-4 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-zinc-300 mb-1.5" htmlFor="password">

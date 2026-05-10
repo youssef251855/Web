@@ -7,6 +7,7 @@ interface ActionEditorProps {
   element: PageElement;
   updateElement: (id: string, updates: Partial<PageElement>) => void;
   userPages: any[];
+  userTables?: any[];
 }
 
 const ACTION_GROUPS: { group: string, icon: any, types: ActionType[] }[] = [
@@ -20,7 +21,7 @@ const ACTION_GROUPS: { group: string, icon: any, types: ActionType[] }[] = [
   { group: 'Advanced', icon: Code, types: ['run_js'] }
 ];
 
-export default function ActionEditor({ element, updateElement, userPages }: ActionEditorProps) {
+export default function ActionEditor({ element, updateElement, userPages, userTables = [] }: ActionEditorProps) {
   const events = element.events || [];
   
   // Decide which trigger we are currently editing.
@@ -104,7 +105,14 @@ export default function ActionEditor({ element, updateElement, userPages }: Acti
               )}
               {act.type === 'db_fetch' && (
                 <div className="space-y-2">
-                  <input type="text" className="w-full text-xs p-1 border rounded" placeholder="Table ID" value={act.params.tableId || ''} onChange={(e) => updateActionParam(idx, 'tableId', e.target.value)} />
+                  <select 
+                    className="w-full text-xs p-1 border rounded"
+                    value={act.params.tableId || ''} 
+                    onChange={(e) => updateActionParam(idx, 'tableId', e.target.value)}
+                  >
+                    <option value="">Select Table...</option>
+                    {userTables.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
                   <div className="flex gap-2">
                     <input type="text" className="w-1/2 text-xs p-1 border rounded" placeholder="Filter Field (e.g. seat_number)" value={act.params.filterField || ''} onChange={(e) => updateActionParam(idx, 'filterField', e.target.value)} />
                     <input type="text" className="w-1/2 text-xs p-1 border rounded" placeholder="Filter Value (e.g. {{seatNumber}})" value={act.params.filterValue || ''} onChange={(e) => updateActionParam(idx, 'filterValue', e.target.value)} />

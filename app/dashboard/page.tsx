@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { Plus, Edit, ExternalLink, Layout as LayoutIcon, MessageSquare, CreditCard, PanelsTopLeft } from 'lucide-react';
+import { Plus, Edit, ExternalLink, Layout as LayoutIcon, MessageSquare, CreditCard, PanelsTopLeft, GraduationCap } from 'lucide-react';
 import Link from 'next/link';
 
 interface Page {
@@ -127,6 +127,49 @@ export default function Dashboard() {
         { id: Date.now().toString(), type: 'hero', content: { title: 'Welcome to Our Store', subtitle: 'Browse our latest products below.', buttonText: 'Shop Now' }, style: { backgroundColor: '#18181b', color: '#fff', padding: '60px 20px', textAlign: 'center' } },
         { id: (Date.now() + 1).toString(), type: 'gallery', content: ['https://picsum.photos/seed/store1/400/300', 'https://picsum.photos/seed/store2/400/300', 'https://picsum.photos/seed/store3/400/300'], style: { display: 'flex', gap: '20px', padding: '40px 20px', justifyContent: 'center' } }
       ];
+    } else if (selectedTemplate === 'exam') {
+      try {
+        const examFields = [
+          { name: 'student_name', type: 'text' },
+          { name: 'seat_number', type: 'text' },
+          { name: 'total_score', type: 'number' },
+          { name: 'max_score', type: 'number' },
+          { name: 'percentage', type: 'number' },
+          { name: 'status', type: 'text' }
+        ];
+        const { data: tableData, error: tableError } = await supabase
+          .from('tables')
+          .insert({
+            user_id: user.id,
+            name: newPageTitle + ' Results',
+            fields: JSON.stringify(examFields),
+          })
+          .select('id')
+          .single();
+
+        if (tableError) throw tableError;
+        const tableId = tableData.id;
+
+        initialElements = [
+          {
+            id: 'exam_header',
+            type: 'heading',
+            content: 'الاستعلام عن النتائج',
+            style: { textAlign: 'center', fontSize: '32px', fontWeight: 'bold', padding: '40px' },
+            position: { x: 0, y: 0 }
+          },
+          {
+            id: 'exam_results',
+            type: 'search',
+            content: { placeholder: 'أدخل رقم الجلوس أو الاسم للبحث...' },
+            dataSource: { tableId: tableId },
+            style: { width: '100%', maxWidth: '800px', margin: '0 auto', display: 'block' },
+            position: { x: 0, y: 100 }
+          }
+        ];
+      } catch (err) {
+        console.error("Exam template creation failed:", err);
+      }
     }
 
     try {
@@ -360,6 +403,19 @@ export default function Dashboard() {
                         <CreditCard className="w-8 h-8" />
                       </div>
                       <span className={`block font-medium text-sm ${selectedTemplate === 'store' ? 'text-zinc-100' : 'text-zinc-500'}`}>E-commerce</span>
+                    </div>
+
+                    <div 
+                      onClick={() => setSelectedTemplate('exam')}
+                      className={`border rounded-xl p-4 cursor-pointer transition relative ${selectedTemplate === 'exam' ? 'border-zinc-400 bg-zinc-900' : 'border-zinc-800 hover:border-zinc-700'}`}
+                    >
+                      {selectedTemplate === 'exam' && (
+                        <div className="absolute top-3 right-3 w-3 h-3 bg-white rounded-full"></div>
+                      )}
+                      <div className={`h-24 border rounded-lg mb-3 flex items-center justify-center ${selectedTemplate === 'exam' ? 'bg-[#000] border-zinc-800 text-zinc-300' : 'bg-[#000] border-zinc-800 text-zinc-600'}`}>
+                        <GraduationCap className="w-8 h-8" />
+                      </div>
+                      <span className={`block font-medium text-sm ${selectedTemplate === 'exam' ? 'text-zinc-100' : 'text-zinc-500'}`}>Exam Results</span>
                     </div>
                   </div>
                 </div>

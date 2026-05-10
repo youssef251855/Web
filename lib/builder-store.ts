@@ -70,7 +70,8 @@ export type ElementType =
   | "tooltip_text"
   | "dropdown_menu"
   | "range_slider"
-  | "label";
+  | "label"
+  | "exam_result_lookup";
 
 export interface Position {
   x: number;
@@ -259,7 +260,7 @@ const defaultContent: Record<ElementType, any> = {
   iframe: "https://example.com",
   breadcrumbs: ["Home", "Products", "Current"],
   tags: ["Design", "Development", "Marketing"],
-  search: "Search...",
+  search: { placeholder: "Search the database..." },
   banner: { text: "Special Offer! 50% off today.", link: "#" },
   footer: { copyright: "© 2026 My Company", links: ["Privacy", "Terms"] },
   logo: { url: "https://picsum.photos/seed/logo/150/50", alt: "Company Logo" },
@@ -333,7 +334,8 @@ const defaultContent: Record<ElementType, any> = {
     options: ["Option A", "Option B", "Option C"],
   },
   range_slider: { label: "Volume", min: 0, max: 100, value: 50 },
-  label: "Label Text"
+  label: "Label Text",
+  exam_result_lookup: { tableId: "" }
 };
 
 const defaultStyle: Record<ElementType, ElementStyle> = {
@@ -638,7 +640,8 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
     width: "200px",
   },
   range_slider: { width: "200px" },
-  label: { fontSize: "14px", color: "#374151", fontWeight: "medium" }
+  label: { fontSize: "14px", color: "#374151", fontWeight: "medium" },
+  exam_result_lookup: { width: "100%", padding: "16px" }
 };
 
 export const useBuilderStore = create<BuilderState>((set) => ({

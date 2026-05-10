@@ -8,6 +8,7 @@ import { Users, Trash2, Mail, Shield } from 'lucide-react';
 interface SiteUser {
   id: string;
   email: string;
+  name: string;
   role: 'admin' | 'user';
   createdAt: any;
 }
@@ -60,9 +61,10 @@ export default function UsersPage() {
 
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div className="bg-gray-50 px-6 py-4 border-b flex items-center text-sm font-semibold text-gray-500 uppercase tracking-wider">
-          <div className="w-1/2 flex items-center"><Mail className="w-4 h-4 mr-2" /> Email</div>
-          <div className="w-1/4 flex items-center"><Shield className="w-4 h-4 mr-2" /> Role</div>
-          <div className="w-1/4 text-right">Actions</div>
+          <div className="w-1/3 flex items-center"><Mail className="w-4 h-4 mr-2" /> Email</div>
+          <div className="w-1/3 flex items-center"><Users className="w-4 h-4 mr-2" /> Name</div>
+          <div className="w-1/6 flex items-center"><Shield className="w-4 h-4 mr-2" /> Role</div>
+          <div className="w-1/6 text-right">Actions</div>
         </div>
         
         <div className="divide-y">
@@ -77,13 +79,14 @@ export default function UsersPage() {
             </div>
           ) : siteUsers.map(siteUser => (
             <div key={siteUser.id} className="p-6 flex items-center hover:bg-gray-50 transition">
-              <div className="w-1/2 font-medium text-gray-900">{siteUser.email}</div>
-              <div className="w-1/4">
+              <div className="w-1/3 font-medium text-gray-900">{siteUser.email}</div>
+              <div className="w-1/3 text-gray-600">{siteUser.name}</div>
+              <div className="w-1/6">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize ${siteUser.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>
                   {siteUser.role}
                 </span>
               </div>
-              <div className="w-1/4 flex justify-end">
+              <div className="w-1/6 flex justify-end">
                 <button
                   onClick={() => handleDelete(siteUser.id)}
                   className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition"
