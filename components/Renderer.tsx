@@ -1010,6 +1010,7 @@ export default function Renderer({
           <div id={element.customId} style={elStyle} className={customClass}>
             <input
               type="file"
+              accept="image/*"
               disabled={isBuilderMode}
               style={{ display: "none" }}
               id={`file-${element.id}`}

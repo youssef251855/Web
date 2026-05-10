@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/lib/auth-context';
 import { useRouter, usePathname } from 'next/navigation';
-import { LogOut, Layout as LayoutIcon, Database, Users, Settings, Menu, X } from 'lucide-react';
+import { LogOut, Layout as LayoutIcon, Database, Users, Settings, Menu, X, Folder } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
@@ -66,6 +66,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <Link href="/dashboard/database" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === '/dashboard/database' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}>
             <Database className="w-5 h-5 mr-3" />
             Database
+          </Link>
+          <Link href="/dashboard/files" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === '/dashboard/files' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}>
+            <Folder className="w-5 h-5 mr-3" />
+            Files
           </Link>
           <Link href="/dashboard/users" className={`flex items-center px-4 py-3 rounded-lg transition ${pathname === '/dashboard/users' ? 'bg-blue-50 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}>
             <Users className="w-5 h-5 mr-3" />

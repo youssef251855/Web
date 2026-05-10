@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useBuilderStore, ElementType, PageElement } from "@/lib/builder-store";
+import { shallow } from 'zustand/shallow';
 import { motion } from "motion/react";
 import {
   ArrowLeft,
@@ -145,6 +146,12 @@ const SIDEBAR_CATEGORIES = [
     ] as { type: ElementType; icon: any; label: string }[],
   },
   {
+    name: "Files",
+    items: [
+      { type: "file_upload", icon: ImageIcon, label: "File Upload" },
+    ] as { type: ElementType; icon: any; label: string }[],
+  },
+  {
     name: "Advanced & Custom",
     items: [
       { type: "nav_bar", icon: PanelBottom, label: "Nav Bar" },
@@ -154,7 +161,6 @@ const SIDEBAR_CATEGORIES = [
       { type: "timeline", icon: ListOrdered, label: "Timeline" },
       { type: "carousel", icon: ImageIcon, label: "Carousel" },
       { type: "date_picker", icon: Clock, label: "Date Picker" },
-      { type: "file_upload", icon: Check, label: "File Upload" },
       { type: "color_picker", icon: AppWindow, label: "Color Picker" },
       { type: "qr_code", icon: Search, label: "QR Code" },
       { type: "chat_bubble", icon: MessageSquare, label: "Chat Bubble" },
@@ -332,7 +338,8 @@ export default function BuilderPage() {
   }, [user]);
 
   const handleSave = async (showSuccessAlert = false) => {
-    if (!user || !id) return;
+    if (!user || !id || isSavingRef.current) return;
+    isSavingRef.current = true;
     setSaving(true);
     try {
       const state = useBuilderStore.getState();
@@ -358,6 +365,7 @@ export default function BuilderPage() {
          alert('Error saving page: ' + error.message);
       }
     } finally {
+      isSavingRef.current = false;
       setSaving(false);
     }
   };
@@ -396,34 +404,32 @@ export default function BuilderPage() {
   // Auto-save effect
   const handleSaveRef = useRef(handleSave);
   handleSaveRef.current = handleSave;
+  const isSavingRef = useRef(false);
 
   useEffect(() => {
     if (!user || !id) return;
 
     let timeoutId: NodeJS.Timeout | null = null;
-    let initialRender = true;
-    const unsub = useBuilderStore.subscribe((state, prevState) => {
-      if (initialRender) {
-        initialRender = false;
-        return;
-      }
-      if (
-        !prevState ||
-        state.elements !== prevState.elements ||
-        state.variables !== prevState.variables
-      ) {
-        if (timeoutId) clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-          handleSaveRef.current();
-        }, 2000);
-      }
-    });
+    const unsub = useBuilderStore.subscribe(
+        (state) => [state.elements, state.variables],
+        ([elements, variables], [prevElements, prevVariables]) => {
+          if (elements !== prevElements || variables !== prevVariables) {
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+              if (!isSavingRef.current) {
+                  handleSaveRef.current();
+              }
+            }, 2000);
+          }
+        },
+        { equalityFn: shallow }
+    );
 
     return () => {
       unsub();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [user, id]);
+  }, [user, id, shallow]);
 
   const handleAddElement = (type: ElementType) => {
     // Add to center of canvas roughly

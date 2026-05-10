@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { subscribeWithSelector } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
 
 export type ElementType =
@@ -644,7 +645,7 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
   exam_result_lookup: { width: "100%", padding: "16px" }
 };
 
-export const useBuilderStore = create<BuilderState>((set) => ({
+export const useBuilderStore = create<BuilderState>()(subscribeWithSelector((set) => ({
   elements: [],
   variables: [],
   selectedElementId: null,
@@ -708,4 +709,4 @@ export const useBuilderStore = create<BuilderState>((set) => ({
     })),
   selectElement: (id) => set({ selectedElementId: id }),
   setIsDragging: (isDragging) => set({ isDragging }),
-}));
+})));
