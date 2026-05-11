@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
 export const config = {
   matcher: [
@@ -14,33 +15,48 @@ export const config = {
   ],
 };
 
-export default function middleware(req: NextRequest) {
+export default async function middleware(req: NextRequest) {
   const url = req.nextUrl;
   const hostname = req.headers.get('host') || '';
 
-  // Get the root domain from environment variables
-  // Example: "mywebsite.com" or "localhost:3000"
-  let rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
-
-  // If no root domain is configured, proceed with normal path-based routing
-  if (!rootDomain) {
+  // Skip for standard local dev or App URL in AI Studio
+  if (
+    hostname.includes('localhost') ||
+    hostname.includes('.run.app') ||
+    hostname.includes('vercel.app') ||
+    hostname.includes('.web.app')
+  ) {
     return NextResponse.next();
   }
 
-  // Remove potential http/https prefixes from rootDomain
-  rootDomain = rootDomain.replace(/^https?:\/\//, '');
-
-  // Extract the subdomain
-  // Example: "john.mywebsite.com" -> "john"
-  const currentHost = hostname.replace(`.${rootDomain}`, '');
-
-  // If there is no subdomain, or it's the root domain, or 'www', proceed normally
-  if (currentHost === hostname || currentHost === rootDomain || currentHost === 'www') {
-    return NextResponse.next();
+  const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN;
+  if (rootDomain && hostname.endsWith(`.${rootDomain}`)) {
+    return NextResponse.next(); // Handled normally or subdomains handle it
   }
 
-  // Rewrite the request to the dynamic route /[username]/[path]
-  // Example: john.mywebsite.com/about -> /john/about
-  // Example: john.mywebsite.com/ -> /john
-  return NextResponse.rewrite(new URL(`/${currentHost}${url.pathname}`, req.url));
+  // Handle Custom Domains
+  // We queries Supabase to find a page matching the custom_domain
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (supabaseUrl && supabaseKey) {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Find page with the given custom domain
+    const { data: pageMatch } = await supabase
+      .from('pages')
+      .select('slug, users(username)')
+      .eq('content->>customDomain', hostname)
+      .single() as { data: any, error: any };
+
+    if (pageMatch && pageMatch.users && (pageMatch.users.username || (Array.isArray(pageMatch.users) && pageMatch.users[0]?.username))) {
+      const username = Array.isArray(pageMatch.users) ? pageMatch.users[0].username : pageMatch.users.username;
+      const slug = pageMatch.slug;
+      // Rewrite to /[username]/[slug] -> The user's page handles paths nicely
+      return NextResponse.rewrite(new URL(`/${username}/${slug}${url.pathname}`, req.url));
+    }
+  }
+
+  // If no match, continue
+  return NextResponse.next();
 }
+

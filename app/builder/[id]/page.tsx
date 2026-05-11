@@ -70,6 +70,7 @@ const SIDEBAR_CATEGORIES = [
   {
     name: "Layout & Basic",
     items: [
+      { type: "section_block", icon: AlignJustify, label: "Section" },
       { type: "text", icon: Type, label: "Text" },
       { type: "heading", icon: Heading, label: "Heading" },
       { type: "spacer", icon: AlignJustify, label: "Spacer" },
@@ -205,6 +206,13 @@ export default function BuilderPage() {
   const router = useRouter();
   
   const setElements = useBuilderStore((s) => s.setElements);
+  const sitePages = useBuilderStore((s) => s.sitePages);
+  const setSitePages = useBuilderStore((s) => s.setSitePages);
+  const currentPageId = useBuilderStore((s) => s.currentPageId);
+  const setCurrentPageId = useBuilderStore((s) => s.setCurrentPageId);
+  const addSitePage = useBuilderStore((s) => s.addSitePage);
+  const updateSitePage = useBuilderStore((s) => s.updateSitePage);
+  const removeSitePage = useBuilderStore((s) => s.removeSitePage);
   const variables = useBuilderStore((s) => s.variables);
   const setVariables = useBuilderStore((s) => s.setVariables);
   const addElement = useBuilderStore((s) => s.addElement);
@@ -215,6 +223,7 @@ export default function BuilderPage() {
   const [pageTitle, setPageTitle] = useState("");
   const [pageSlug, setPageSlug] = useState("");
   const [pageDescription, setPageDescription] = useState("");
+  const [customDomain, setCustomDomain] = useState("");
   const [saving, setSaving] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -225,7 +234,7 @@ export default function BuilderPage() {
   const [mobileView, setMobileView] = useState<
     "elements" | "canvas" | "properties"
   >("canvas");
-  const [leftTab, setLeftTab] = useState<"elements" | "variables">("elements");
+  const [leftTab, setLeftTab] = useState<"pages" | "elements" | "variables">("pages");
   const [userPages, setUserPages] = useState<
     { id: string; title: string; slug: string }[]
   >([]);
@@ -233,8 +242,10 @@ export default function BuilderPage() {
     { id: string; name: string; fields: any[] }[]
   >([]);
   const [userSettings, setUserSettings] = useState<{
-    cloudinaryCloudName?: string;
-    cloudinaryUploadPreset?: string;
+    settings: {
+      cloudinaryCloudName?: string;
+      cloudinaryUploadPreset?: string;
+    };
   } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -265,7 +276,19 @@ export default function BuilderPage() {
           setPageSlug(docSnap.slug);
           setPageDescription(docSnap.description || "");
           const content = typeof docSnap.content === 'string' ? JSON.parse(docSnap.content) : docSnap.content;
-          setElements(content?.elements || []);
+          setCustomDomain(content?.customDomain || "");
+          
+          if (content?.sitePages && content.sitePages.length > 0) {
+            setSitePages(content.sitePages);
+            setCurrentPageId(content.sitePages[0].id);
+            setElements(content.sitePages[0].elements || []);
+          } else {
+            // Legacy single-page conversion
+            const defaultPage = { id: 'home', name: 'Home', path: '/', elements: content?.elements || [] };
+            setSitePages([defaultPage]);
+            setCurrentPageId('home');
+            setElements(defaultPage.elements);
+          }
           setVariables(content?.variables || []);
         } else {
           alert(`You do not have permission to edit this page. User: ${user.id}, Page owner: ${docSnap.user_id}`);
@@ -277,7 +300,7 @@ export default function BuilderPage() {
       }
     };
     fetchPage();
-  }, [id, user, router, setElements, setVariables]);
+  }, [id, user, router, setElements, setVariables, setCurrentPageId, setSitePages]);
 
   useEffect(() => {
     const fetchUserPagesAndTables = async () => {
@@ -343,17 +366,33 @@ export default function BuilderPage() {
     setSaving(true);
     try {
       const state = useBuilderStore.getState();
+      
+      // Sync active elements into active site page
+      const currentSitePages = state.sitePages.map(p => 
+        p.id === state.currentPageId ? { ...p, elements: state.elements } : p
+      );
+
       const { error } = await supabase
         .from("pages")
         .update({
           title: pageTitle,
           slug: pageSlug,
           description: pageDescription,
-          content: JSON.stringify({ elements: state.elements, variables }),
+          content: { 
+            sitePages: currentSitePages, 
+            variables: state.variables,
+            customDomain: customDomain || null
+          },
         })
         .eq("id", id);
         
       if (error) throw error;
+      
+      // Update store so it has latest synced sitePages
+      // Only update if different to avoid triggering subscription cycles or re-renders unnecessarily
+      if (JSON.stringify(currentSitePages) !== JSON.stringify(state.sitePages)) {
+        state.setSitePages(currentSitePages);
+      }
       
       if (showSuccessAlert) {
          // Optionally use UI toast instead of alert for better UX, but simple alert is fine for manual clicks
@@ -368,6 +407,13 @@ export default function BuilderPage() {
       isSavingRef.current = false;
       setSaving(false);
     }
+  };
+
+  const handleSaveWithTimeout = async (showSuccessAlert = false) => {
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Save operation timed out')), 10000)
+    );
+    return Promise.race([handleSave(showSuccessAlert), timeoutPromise]);
   };
 
   const getPublicUrl = () => {
@@ -402,8 +448,8 @@ export default function BuilderPage() {
   };
 
   // Auto-save effect
-  const handleSaveRef = useRef(handleSave);
-  handleSaveRef.current = handleSave;
+  const handleSaveRef = useRef(handleSaveWithTimeout);
+  handleSaveRef.current = handleSaveWithTimeout;
   const isSavingRef = useRef(false);
 
   useEffect(() => {
@@ -411,9 +457,9 @@ export default function BuilderPage() {
 
     let timeoutId: NodeJS.Timeout | null = null;
     const unsub = useBuilderStore.subscribe(
-        (state) => [state.elements, state.variables],
-        ([elements, variables], [prevElements, prevVariables]) => {
-          if (elements !== prevElements || variables !== prevVariables) {
+        (state) => [state.elements, state.variables, state.sitePages],
+        ([elements, variables, sitePages], [prevElements, prevVariables, prevSitePages]) => {
+          if (elements !== prevElements || variables !== prevVariables || sitePages !== prevSitePages) {
             if (timeoutId) clearTimeout(timeoutId);
             timeoutId = setTimeout(() => {
               if (!isSavingRef.current) {
@@ -429,7 +475,7 @@ export default function BuilderPage() {
       unsub();
       if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [user, id, shallow]);
+  }, [user, id]);
 
   const handleAddElement = (type: ElementType) => {
     // Add to center of canvas roughly
@@ -1357,6 +1403,7 @@ export default function BuilderPage() {
       case "code":
       case "quote":
       case "text":
+      case "section_block":
         return (
           <textarea
             value={selectedElement.content as string}
@@ -1381,12 +1428,12 @@ export default function BuilderPage() {
               placeholder={`${selectedElement.type === "image" ? "Image" : "Video"} URL`}
             />
             {selectedElement.type === "image" &&
-              userSettings?.cloudinaryCloudName &&
-              userSettings?.cloudinaryUploadPreset && (
+              userSettings?.settings?.cloudinaryCloudName &&
+              userSettings?.settings?.cloudinaryUploadPreset && (
                 <div className="pt-2">
                   <CloudinaryUploadWidget
-                    cloudName={userSettings.cloudinaryCloudName}
-                    uploadPreset={userSettings.cloudinaryUploadPreset}
+                    cloudName={userSettings.settings.cloudinaryCloudName}
+                    uploadPreset={userSettings.settings.cloudinaryUploadPreset}
                     onSuccess={(url) =>
                       updateElement(selectedElement.id, { content: url })
                     }
@@ -1517,22 +1564,87 @@ export default function BuilderPage() {
             <aside
               className={`${mobileView === "elements" ? "flex" : "hidden"} md:flex absolute md:relative z-10 w-full md:w-64 h-full bg-white border-r flex-col shrink-0 overflow-hidden`}
             >
-              <div className="flex border-b shrink-0">
+              <div className="flex border-b shrink-0 overflow-x-auto">
+                <button
+                  onClick={() => setLeftTab("pages")}
+                  className={`flex-1 min-w-[70px] py-3 px-2 text-xs font-semibold uppercase tracking-wider ${leftTab === "pages" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500"}`}
+                >
+                  Pages
+                </button>
                 <button
                   onClick={() => setLeftTab("elements")}
-                  className={`flex-1 py-3 text-sm font-semibold uppercase tracking-wider ${leftTab === "elements" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500"}`}
+                  className={`flex-1 min-w-[70px] py-3 px-2 text-xs font-semibold uppercase tracking-wider ${leftTab === "elements" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500"}`}
                 >
                   Elements
                 </button>
                 <button
                   onClick={() => setLeftTab("variables")}
-                  className={`flex-1 py-3 text-sm font-semibold uppercase tracking-wider ${leftTab === "variables" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500"}`}
+                  className={`flex-1 min-w-[70px] py-3 px-2 text-xs font-semibold uppercase tracking-wider ${leftTab === "variables" ? "border-b-2 border-blue-500 text-blue-600" : "text-gray-500"}`}
                 >
-                  Variables
+                  Vars
                 </button>
               </div>
 
               <div className="flex-1 overflow-y-auto hidden-scrollbar">
+                {leftTab === "pages" && (
+                  <div className="p-4 space-y-4">
+                    <button
+                      onClick={() => {
+                        const name = prompt("Enter page name (e.g. About Us)");
+                        if (name) {
+                          const defaultPath = '/' + name.toLowerCase().replace(/\s+/g, '-');
+                          let path = prompt("Enter page path (e.g. /about)", defaultPath);
+                          if (path) {
+                            if (!path.startsWith('/')) path = '/' + path;
+                            addSitePage(name, path);
+                          }
+                        }
+                      }}
+                      className="w-full py-2 bg-blue-50 text-blue-600 rounded-md text-sm font-medium hover:bg-blue-100 flex items-center justify-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" /> Add Page
+                    </button>
+                    <div className="space-y-2">
+                      {sitePages.map((page) => (
+                        <div
+                          key={page.id}
+                          className={`group flex items-center justify-between p-2 rounded-md cursor-pointer transition ${currentPageId === page.id ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50 border border-transparent"}`}
+                          onClick={() => {
+                            if (currentPageId !== page.id) {
+                              // Save current elements to the current page before switching
+                              updateSitePage(currentPageId, { elements: useBuilderStore.getState().elements });
+                              setCurrentPageId(page.id);
+                              setElements(page.elements || []);
+                            }
+                          }}
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-gray-800">{page.name}</span>
+                            <span className="text-xs text-gray-500 font-mono">{page.path}</span>
+                          </div>
+                          {sitePages.length > 1 && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (confirm("Delete this page?")) {
+                                  let nextId = sitePages.find((p) => p.id !== page.id)?.id;
+                                  if (currentPageId === page.id && nextId) {
+                                    setCurrentPageId(nextId);
+                                    setElements(sitePages.find((p) => p.id === nextId)?.elements || []);
+                                  }
+                                  removeSitePage(page.id);
+                                }
+                              }}
+                              className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {leftTab === "elements" && (
                   <div className="p-4 space-y-6">
                     {SIDEBAR_CATEGORIES.map((category) => (
@@ -1913,6 +2025,7 @@ export default function BuilderPage() {
                     element={selectedElement}
                     updateElement={updateElement}
                     userPages={userPages}
+                    sitePages={sitePages}
                     userTables={userTables}
                   />
 
@@ -2021,6 +2134,29 @@ export default function BuilderPage() {
                   className="w-full px-4 py-2 border rounded-md outline-none focus:border-blue-500"
                   placeholder="e.g. My Awesome Site"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Custom Domain
+                  <span className="text-xs text-gray-500 font-normal ml-2">
+                    (Vercel or custom setup required)
+                  </span>
+                </label>
+                <div className="flex rounded-md shadow-sm">
+                  <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                    https://
+                  </span>
+                  <input
+                    type="text"
+                    value={customDomain}
+                    onChange={(e) => setCustomDomain(e.target.value.toLowerCase().replace(/https?:\/\//,'').trim())}
+                    className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 outline-none focus:border-blue-500 sm:text-sm"
+                    placeholder="example.com"
+                  />
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  You can set a custom domain here to link it with your project. If you deploy this project to Vercel, this domain will be linked automatically using the Vercel Domains API via Edge Middleware.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

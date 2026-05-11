@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { Star } from "lucide-react";
 import ExamResultLookup from "./templates/ExamResultLookup";
 import DataSearch from "./templates/DataSearch";
+import CloudinaryUploadWidget from "./CloudinaryUploadWidget";
 
 interface RendererProps {
   elements: PageElement[];
@@ -29,6 +30,7 @@ export default function Renderer({
   // State for components that need DB
   const [dataSources, setDataSources] = useState<Record<string, any[]>>({});
   const [currentUserProfile, setCurrentUserProfile] = useState<any>(null);
+  const [userSettings, setUserSettings] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formSuccess, setFormSuccess] = useState<{ [key: string]: boolean }>(
     {},
@@ -38,14 +40,22 @@ export default function Renderer({
     // Fetch profile
     const fetchProfile = async () => {
       if (!userId) return;
-      const { data, error } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .single();
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('user_settings')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
 
-      if (!error && data) {
-        setCurrentUserProfile(data);
+      if (!profileError && profileData) {
+        setCurrentUserProfile(profileData);
+      }
+      if (!settingsError && settingsData) {
+        setUserSettings(settingsData);
       }
     };
     fetchProfile();
@@ -437,6 +447,12 @@ export default function Renderer({
         return (
           <div id={element.customId} style={elStyle} className={customClass} />
         );
+      case "section_block":
+        return (
+          <div id={element.customId} style={elStyle} className={customClass}>
+            {element.content}
+          </div>
+        );
       case "list":
         const listData =
           dataSources[element.id] && dataSources[element.id].length > 0
@@ -787,7 +803,9 @@ export default function Renderer({
                 // If the URL is a relative path like 'about' or '/about'
                 // We should make sure it directs to the correct path under the user's site
                 const cleanPath = finalUrl.replace(/^\/+/, '');
-                if (username) {
+                if (username && slug) {
+                  finalUrl = `/${username}/${slug}/${cleanPath}`;
+                } else if (username) {
                   finalUrl = `/${username}/${cleanPath}`;
                 } else if (finalUrl.startsWith('/')) {
                    // Leave it as is for custom domains
@@ -1007,27 +1025,39 @@ export default function Renderer({
         );
       case "file_upload":
         return (
-          <div id={element.customId} style={elStyle} className={customClass}>
-            <input
-              type="file"
-              accept="image/*"
-              disabled={isBuilderMode}
-              style={{ display: "none" }}
-              id={`file-${element.id}`}
-              onChange={() => executeElementEvents(element, "onClick")}
-            />
-            <label
-              htmlFor={`file-${element.id}`}
-              style={{
-                cursor: isBuilderMode ? "default" : "pointer",
-                color: "#6b7280",
-                fontSize: "14px",
-                display: "block",
-              }}
-            >
-              {element.content?.buttonText || "Upload"}
-            </label>
-          </div>
+          <CloudinaryUploadWidget
+            cloudName={userSettings?.settings?.cloudinaryCloudName}
+            uploadPreset={userSettings?.settings?.cloudinaryUploadPreset}
+            buttonText="Upload File"
+            className={customClass}
+            onSuccess={async (url) => {
+              // Ensure we have a target userId to save the file to (either the app owner's userId prop or currently logged in user)
+              let targetUserId = userId;
+              if (!targetUserId) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) targetUserId = user.id;
+              }
+
+              if (!targetUserId) {
+                alert('App owner ID not found. Cannot save file metadata.');
+                return;
+              }
+
+              const { error: insertError } = await supabase.from('files').insert({
+                name: 'Uploaded File via Form',
+                url: url,
+                user_id: targetUserId
+              });
+              
+              if (insertError) {
+                  console.error('Error saving file metadata:', insertError);
+                  alert('File uploaded to Cloudinary, but failed to save metadata to dashboard (Schema cache error or permissions). ' + insertError.message);
+              } else {
+                  alert('File uploaded successfully!');
+                  executeElementEvents(element, "onClick");
+              }
+            }}
+          />
         );
       case "color_picker":
         return (

@@ -25,6 +25,9 @@ export default function RootLayout({children}: {children: React.ReactNode}) {
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body suppressHydrationWarning>
+        <div className="bg-amber-500 text-white text-center p-2 text-sm font-semibold sticky top-0 z-50">
+          تنبيه: المنصة قد تتوقف عن العمل في أي وقت.
+        </div>
         <AuthProvider>
           {children}
         </AuthProvider>

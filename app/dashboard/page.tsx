@@ -179,7 +179,17 @@ export default function Dashboard() {
           user_id: user.id,
           title: newPageTitle,
           slug,
-          content: JSON.stringify({ elements: initialElements }),
+          content: JSON.stringify({
+            sitePages: [
+              {
+                id: 'home',
+                name: 'Home',
+                path: '/',
+                elements: initialElements
+              }
+            ],
+            variables: []
+          }),
         })
         .select('id')
         .single();

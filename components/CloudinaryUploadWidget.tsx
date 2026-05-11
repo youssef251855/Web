@@ -40,6 +40,11 @@ export default function CloudinaryUploadWidget({ cloudName, uploadPreset, onSucc
     };
   }, [scriptLoaded]);
 
+  const onSuccessRef = useRef(onSuccess);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+  }, [onSuccess]);
+
   useEffect(() => {
     if (scriptLoaded && typeof window !== 'undefined' && (window as any).cloudinary) {
       widgetRef.current = (window as any).cloudinary.createUploadWidget(
@@ -51,12 +56,14 @@ export default function CloudinaryUploadWidget({ cloudName, uploadPreset, onSucc
         },
         (error: any, result: any) => {
           if (!error && result && result.event === "success") {
-            onSuccess(result.info.secure_url);
+            if (onSuccessRef.current) {
+               onSuccessRef.current(result.info.secure_url);
+            }
           }
         }
       );
     }
-  }, [scriptLoaded, cloudName, uploadPreset, onSuccess]);
+  }, [scriptLoaded, cloudName, uploadPreset]);
 
   const openWidget = () => {
     if (widgetRef.current) {

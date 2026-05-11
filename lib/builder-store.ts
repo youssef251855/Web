@@ -58,6 +58,7 @@ export type ElementType =
   | "timeline"
   | "carousel"
   | "date_picker"
+  | "section_block"
   | "file_upload"
   | "color_picker"
   | "qr_code"
@@ -169,6 +170,13 @@ export interface PageElement {
   dataMapping?: DataMapping;
 }
 
+export interface SitePage {
+  id: string;
+  name: string;
+  path: string;
+  elements: PageElement[];
+}
+
 export interface AppVariable {
   id: string;
   name: string;
@@ -178,10 +186,17 @@ export interface AppVariable {
 
 interface BuilderState {
   elements: PageElement[];
+  sitePages: SitePage[];
+  currentPageId: string;
   variables: AppVariable[];
   selectedElementId: string | null;
   isDragging: boolean;
   setElements: (elements: PageElement[]) => void;
+  setSitePages: (pages: SitePage[]) => void;
+  setCurrentPageId: (id: string) => void;
+  addSitePage: (name: string, path: string) => void;
+  removeSitePage: (id: string) => void;
+  updateSitePage: (id: string, updates: Partial<SitePage>) => void;
   setVariables: (variables: AppVariable[]) => void;
   addElement: (type: ElementType, position: Position) => void;
   updateElement: (id: string, updates: Partial<PageElement>) => void;
@@ -307,6 +322,7 @@ const defaultContent: Record<ElementType, any> = {
     "https://picsum.photos/seed/c2/600/300",
   ],
   date_picker: { label: "Select Date", value: "" },
+  section_block: "Section block content",
   file_upload: { label: "Upload Document", buttonText: "Choose File" },
   color_picker: { label: "Choose Theme Color", value: "#3b82f6" },
   qr_code: { data: "https://example.com" },
@@ -580,6 +596,13 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
     border: "1px solid #ccc",
     borderRadius: "4px",
   },
+  section_block: {
+    width: "100%",
+    minHeight: "200px",
+    backgroundColor: "#f3f4f6",
+    display: "flex",
+    padding: "20px"
+  },
   file_upload: {
     padding: "16px",
     border: "1px dashed #ccc",
@@ -647,10 +670,47 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
 
 export const useBuilderStore = create<BuilderState>()(subscribeWithSelector((set) => ({
   elements: [],
+  sitePages: [],
+  currentPageId: "",
   variables: [],
   selectedElementId: null,
   isDragging: false,
   setElements: (elements) => set({ elements }),
+  setSitePages: (sitePages) => set({ sitePages }),
+  setCurrentPageId: (currentPageId) => set({ currentPageId }),
+  addSitePage: (name, path) =>
+    set((state) => {
+      const newId = uuidv4();
+      
+      // Save current elements to current page if possible
+      const updatedSitePages = state.sitePages.map(p => 
+        p.id === state.currentPageId ? { ...p, elements: state.elements } : p
+      );
+
+      return {
+        sitePages: [
+          ...updatedSitePages,
+          {
+            id: newId,
+            name,
+            path,
+            elements: [],
+          },
+        ],
+        currentPageId: newId,
+        elements: [],
+      };
+    }),
+  removeSitePage: (id) =>
+    set((state) => ({
+      sitePages: state.sitePages.filter((p) => p.id !== id),
+    })),
+  updateSitePage: (id, updates) =>
+    set((state) => ({
+      sitePages: state.sitePages.map((p) =>
+        p.id === id ? { ...p, ...updates } : p
+      ),
+    })),
   setVariables: (variables) => set({ variables }),
   addElement: (type, position) =>
     set((state) => ({

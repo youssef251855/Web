@@ -7,6 +7,7 @@ interface ActionEditorProps {
   element: PageElement;
   updateElement: (id: string, updates: Partial<PageElement>) => void;
   userPages: any[];
+  sitePages?: any[];
   userTables?: any[];
 }
 
@@ -21,7 +22,7 @@ const ACTION_GROUPS: { group: string, icon: any, types: ActionType[] }[] = [
   { group: 'Advanced', icon: Code, types: ['run_js'] }
 ];
 
-export default function ActionEditor({ element, updateElement, userPages, userTables = [] }: ActionEditorProps) {
+export default function ActionEditor({ element, updateElement, userPages, sitePages = [], userTables = [] }: ActionEditorProps) {
   const events = element.events || [];
   
   // Decide which trigger we are currently editing.
@@ -85,23 +86,32 @@ export default function ActionEditor({ element, updateElement, userPages, userTa
               
               {/* Dynamic Param Inputs based on Action Type */}
               {act.type === 'navigate_page' && (
+                <div>
+                <label className="text-gray-500 text-[10px] uppercase block mb-1">Target Page</label>
                 <select 
                   className="w-full text-xs p-1 border rounded"
-                  value={act.params.pageSlug || ''}
-                  onChange={(e) => updateActionParam(idx, 'pageSlug', e.target.value)}
-                >
-                  <option value="">Select a page...</option>
-                  {userPages.map(p => <option key={p.id} value={p.slug}>{p.title}</option>)}
-                </select>
-              )}
-              {act.type === 'navigate_url' && (
-                <input 
-                  type="url" 
-                  className="w-full text-xs p-1 border rounded" 
-                  placeholder="https://..."
                   value={act.params.url || ''}
                   onChange={(e) => updateActionParam(idx, 'url', e.target.value)}
-                />
+                >
+                  <option value="">Select an internal page...</option>
+                  {sitePages?.map(p => <option key={p.id} value={p.path}>{p.name} ({p.path})</option>)}
+                </select>
+                </div>
+              )}
+              {act.type === 'navigate_url' && (
+                <div className="space-y-2">
+                  <input 
+                    type="url" 
+                    className="w-full text-xs p-1 border rounded" 
+                    placeholder="External URL (e.g. https://google.com)"
+                    value={act.params.url || ''}
+                    onChange={(e) => updateActionParam(idx, 'url', e.target.value)}
+                  />
+                  <label className="text-xs flex items-center gap-1">
+                    <input type="checkbox" checked={!!act.params.newTab} onChange={(e) => updateActionParam(idx, 'newTab', e.target.checked)} />
+                    Open in new tab
+                  </label>
+                </div>
               )}
               {act.type === 'db_fetch' && (
                 <div className="space-y-2">

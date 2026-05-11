@@ -81,21 +81,29 @@ export const executeWorkflow = async (
     try {
       switch (step.type) {
         case 'navigate_page':
-          const targetPage = step.params.pageSlug;
-          if (targetPage && context.username) {
-            window.location.href = `/${context.username}/${targetPage}`;
-          } else if (targetPage) {
-            window.location.href = `/${targetPage}`;
+          if (step.params.url) {
+            let finalNavUrl = step.params.url;
+            if (finalNavUrl.startsWith('/')) { // absolute custom internal path like /about
+               const cleanPath = finalNavUrl.replace(/^\/+/, '');
+               if (context.username && context.pageSlug) {
+                 finalNavUrl = `/${context.username}/${context.pageSlug}${cleanPath ? `/${cleanPath}` : ''}`;
+               }
+            } else if (!finalNavUrl.startsWith('http') && context.username) {
+               // legacy relative?
+               const cleanPath = finalNavUrl.replace(/^\/+/, '');
+               finalNavUrl = `/${context.username}/${context.pageSlug}${cleanPath ? `/${cleanPath}` : ''}`;
+            }
+
+            if (step.params.newTab) {
+              window.open(finalNavUrl, '_blank');
+            } else {
+              window.location.href = finalNavUrl;
+            }
           }
           break;
         case 'navigate_url':
           if (step.params.url) {
             let finalNavUrl = step.params.url;
-            if (!finalNavUrl.startsWith('http') && context.username) {
-               const cleanPath = finalNavUrl.replace(/^\/+/, '');
-               finalNavUrl = `/${context.username}/${cleanPath}`;
-            }
-
             if (step.params.newTab) {
               window.open(finalNavUrl, '_blank');
             } else {

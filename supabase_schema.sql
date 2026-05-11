@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS public.pages (
     slug TEXT,
     description TEXT,
     content JSONB,
+    custom_domain TEXT UNIQUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -86,7 +87,16 @@ CREATE TABLE IF NOT EXISTS public.user_settings (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 6. Site Users Table (Users registered on created apps)
+-- 6. Files Table
+CREATE TABLE IF NOT EXISTS public.files (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT,
+    url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 7. Site Users Table (Users registered on created apps)
 CREATE TABLE IF NOT EXISTS public.site_users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -102,6 +112,7 @@ ALTER TABLE public.pages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tables ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.files ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_users ENABLE ROW LEVEL SECURITY;
 
 -- 🛡️ Security Policies
@@ -187,6 +198,20 @@ DROP POLICY IF EXISTS "Users can delete their own settings" ON public.user_setti
 CREATE POLICY "Users can delete their own settings" 
     ON public.user_settings FOR DELETE USING (auth.uid() = user_id);
 
+-- files: Users can perform all actions on their own files
+DROP POLICY IF EXISTS "Users can view their own files" ON public.files;
+CREATE POLICY "Users can view their own files" 
+    ON public.files FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert their own files" ON public.files;
+DROP POLICY IF EXISTS "Anyone can insert files" ON public.files;
+CREATE POLICY "Anyone can insert files" 
+    ON public.files FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Users can delete their own files" ON public.files;
+CREATE POLICY "Users can delete their own files" 
+    ON public.files FOR DELETE USING (auth.uid() = user_id);
+
 -- site_users: Users can manage users for their own apps, and read operations can happen during auth
 DROP POLICY IF EXISTS "Anyone can view site_users" ON public.site_users;
 CREATE POLICY "Anyone can view site_users" 
@@ -215,7 +240,8 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.pages;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.tables;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.records;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.user_settings;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.files;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.site_users;
 
 -- Reload the PostgREST schema cache to ensure the API sees the newly created tables immediately
-NOTIFY pgrst, reload schema;
+NOTIFY pgrst, 'reload schema';

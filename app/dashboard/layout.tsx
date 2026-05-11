@@ -20,7 +20,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, []);
 
   useEffect(() => {
-    setIsMobileMenuOpen(false);
+    // setIsMobileMenuOpen(false); // Can be handled via another mechanism or simply bypassed
+    const handleClose = () => {
+      setTimeout(() => setIsMobileMenuOpen(false), 0);
+    };
+    handleClose();
   }, [pathname]);
 
   useEffect(() => {

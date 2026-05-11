@@ -7,7 +7,7 @@ import { PageElement, AppVariable } from '@/lib/builder-store';
 import Renderer from '@/components/Renderer';
 
 export default function PublicSlugPage() {
-  const { username, slug } = useParams();
+  const { username, slug, path } = useParams();
   const [elements, setElements] = useState<PageElement[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,8 +88,35 @@ export default function PublicSlugPage() {
         }
 
         const pageData = pageSnap[0];
-        const content = JSON.parse(pageData.content);
-        setElements(content.elements || []);
+        const content = typeof pageData.content === 'string' ? JSON.parse(pageData.content) : pageData.content;
+        
+        let targetElements: PageElement[] = [];
+
+        if (content.sitePages && content.sitePages.length > 0) {
+          const pathSegments = Array.isArray(path) ? path : (path ? [path] : []);
+          const actualPath = '/' + pathSegments.map(p => typeof p === 'string' ? decodeURIComponent(p) : p).join('/');
+          
+          let page = content.sitePages.find((p: any) => p.path === actualPath);
+          
+          if (!page && pathSegments.length === 0) {
+            page = content.sitePages.find((p: any) => p.path === '/');
+          }
+          if (!page && content.sitePages.length > 0) {
+            page = content.sitePages.find((p: any) => p.path === '/' || p.path === '/home') || content.sitePages[0];
+          }
+          
+          if (!page) {
+            setError(`Page not found: ${actualPath}`);
+            setLoading(false);
+            return;
+          }
+          
+          targetElements = page.elements || [];
+        } else {
+          targetElements = content.elements || [];
+        }
+
+        setElements(targetElements);
         setVariables(content.variables || []);
       } catch (err) {
         console.error(err);
@@ -102,7 +129,7 @@ export default function PublicSlugPage() {
     if (username && slug) {
       fetchPage();
     }
-  }, [username, slug]);
+  }, [username, slug, path]);
 
   if (!mounted) return <div className="min-h-screen flex items-center justify-center"></div>;
   if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div></div>;
