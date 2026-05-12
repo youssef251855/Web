@@ -4,7 +4,7 @@ import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, Code, Zap, Globe, Layers, Shield, ChevronRight, PenTool, Sparkles, Smartphone, LayoutTemplate, Database } from 'lucide-react';
+import { ArrowRight, Code, Zap, Globe, Layers, Shield, ChevronRight, PenTool, Sparkles, Smartphone, LayoutTemplate, Database, Star, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -144,6 +144,20 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Element 1: Trusted By */}
+      <section className="py-10 border-b border-zinc-800/50 bg-[#000000]">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <p className="text-sm text-zinc-500 font-medium mb-8 uppercase tracking-widest">Trusted by innovative teams worldwide</p>
+          <div className="flex flex-wrap justify-center gap-8 md:gap-16 opacity-50 grayscale">
+            <div className="text-xl font-bold font-mono text-white">ACME Corp</div>
+            <div className="text-xl font-bold font-sans text-white">GlobalTech</div>
+            <div className="text-xl font-bold italic text-white">Nexus</div>
+            <div className="text-xl font-bold tracking-widest text-white">PULSE</div>
+            <div className="text-xl font-bold font-serif text-white">Apex</div>
+          </div>
+        </div>
+      </section>
+
       {/* Feature Grid */}
       <section className="py-20 border-t border-zinc-800/50 bg-[#0a0a0a]" id="features">
         <div className="max-w-7xl mx-auto px-6">
@@ -203,6 +217,128 @@ export default function Home() {
               <h3 className="text-xl font-semibold mb-3 text-white">Headless CMS</h3>
               <p className="text-zinc-400">Manage your content in one place and sync it everywhere instantly through powerful APIs.</p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Element 2: Stats */}
+      <section className="py-20 border-t border-zinc-800/50 bg-[#0a0a0a]">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            <div>
+              <div className="text-4xl md:text-5xl font-bold text-white mb-2">1M+</div>
+              <div className="text-zinc-400">Active Users</div>
+            </div>
+            <div>
+              <div className="text-4xl md:text-5xl font-bold text-white mb-2">50M</div>
+              <div className="text-zinc-400">Sites Built</div>
+            </div>
+            <div>
+              <div className="text-4xl md:text-5xl font-bold text-white mb-2">99.9%</div>
+              <div className="text-zinc-400">Uptime</div>
+            </div>
+            <div>
+              <div className="text-4xl md:text-5xl font-bold text-white mb-2">0.5s</div>
+              <div className="text-zinc-400">Avg Load Time</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Element 3: Testimonials */}
+      <section className="py-24 border-t border-zinc-800/50 bg-[#000000]">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 text-white">Loved by creators</h2>
+            <p className="text-zinc-400 text-lg">See what our users have to say about Joex.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="p-8 border border-zinc-800 rounded-2xl bg-zinc-900/30">
+                <div className="flex text-yellow-500 mb-4">
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                  <Star className="w-5 h-5 fill-current" />
+                </div>
+                <p className="text-zinc-300 mb-6">"This platform has completely transformed how our team builds and deploys landing pages. It's incredibly fast and intuitive."</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-zinc-800"></div>
+                  <div>
+                    <div className="font-semibold text-white">Sarah Jenkins</div>
+                    <div className="text-sm text-zinc-500">Product Manager</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Element 4: Pricing */}
+      <section className="py-24 border-t border-zinc-800/50 bg-[#0a0a0a]" id="pricing">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 text-white">Simple, transparent pricing</h2>
+            <p className="text-zinc-400 text-lg">Start for free, upgrade when you need to.</p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {/* Free */}
+            <div className="p-8 border border-zinc-800 rounded-2xl bg-[#000000]">
+              <h3 className="text-xl font-semibold text-white mb-2">Hobby</h3>
+              <div className="text-3xl font-bold text-white mb-6">$0<span className="text-sm font-normal text-zinc-500">/mo</span></div>
+              <ul className="space-y-4 mb-8 text-zinc-400 text-sm">
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> Up to 3 projects</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> Community support</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> Joex.app domain</li>
+              </ul>
+              <button className="w-full py-3 rounded-full border border-zinc-700 text-white hover:bg-zinc-800 transition">Get Started</button>
+            </div>
+            {/* Pro */}
+            <div className="p-8 border border-blue-500 rounded-2xl bg-[#000000] relative">
+               <div className="absolute top-0 right-8 -translate-y-1/2 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Popular</div>
+              <h3 className="text-xl font-semibold text-white mb-2">Pro</h3>
+              <div className="text-3xl font-bold text-white mb-6">$19<span className="text-sm font-normal text-zinc-500">/mo</span></div>
+              <ul className="space-y-4 mb-8 text-zinc-400 text-sm">
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> Unlimited projects</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> Priority support</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> Custom domains</li>
+              </ul>
+              <button className="w-full py-3 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition font-semibold">Subscribe Now</button>
+            </div>
+            {/* Team */}
+            <div className="p-8 border border-zinc-800 rounded-2xl bg-[#000000]">
+              <h3 className="text-xl font-semibold text-white mb-2">Team</h3>
+              <div className="text-3xl font-bold text-white mb-6">$49<span className="text-sm font-normal text-zinc-500">/mo</span></div>
+              <ul className="space-y-4 mb-8 text-zinc-400 text-sm">
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> Everything in Pro</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> Collaborative editing</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> Role management</li>
+              </ul>
+              <button className="w-full py-3 rounded-full border border-zinc-700 text-white hover:bg-zinc-800 transition">Contact Sales</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Element 5: FAQ */}
+      <section className="py-24 border-t border-zinc-800/50 bg-[#000000]">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 text-white">Frequently Asked Questions</h2>
+          </div>
+          <div className="space-y-4">
+            {[ 
+              {q: "Do I need to know how to code?", a: "Not at all! Joex provides a fully visual interface so you can build out complex websites without writing a single line of code. However, you can inject custom code if you want."},
+              {q: "Can I host my website somewhere else?", a: "Currently, we only support hosting within our optimized global deployment network to ensure top-notch performance."},
+              {q: "Is there a free trial?", a: "Yes, our Hobby plan is completely free and never expires. You can upgrade to a higher tier anytime as your needs grow."}
+            ].map((faq, i) => (
+              <div key={i} className="p-6 border border-zinc-800 rounded-2xl bg-[#0a0a0a]">
+                <h3 className="text-lg font-semibold text-white mb-2">{faq.q}</h3>
+                <p className="text-zinc-400">{faq.a}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

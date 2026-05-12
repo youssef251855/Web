@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ar" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joex - Build the web</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons (Alternative to Lucide) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: #000000;
+            color: #fafa;
+        }
+        ::selection {
+            background-color: rgba(59, 130, 246, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-[#000000] text-zinc-50 font-sans">
+    
+    <!-- Navigation -->
+    <nav class="fixed top-0 left-0 right-0 z-50 border-b border-zinc-800/50 bg-[#000000]/80 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 bg-white rounded flex items-center justify-center">
+                    <div class="w-3.5 h-3.5 bg-black rounded-sm"></div>
+                </div>
+                <span class="font-semibold text-xl tracking-tight text-white">Joex</span>
+            </div>
+            <div class="hidden md:flex items-center gap-6 text-sm font-medium text-zinc-400">
+                <a href="#features" class="hover:text-white transition-colors">Features</a>
+                <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
+            </div>
+            <div>
+                <a href="#" class="text-sm font-medium px-4 py-2 bg-white text-black rounded-full hover:bg-zinc-200 transition-colors">
+                    Sign In
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden px-6">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] opacity-20 pointer-events-none">
+            <div class="absolute inset-0 bg-blue-500 blur-[120px] mix-blend-screen rounded-full"></div>
+        </div>
+
+        <div class="max-w-5xl mx-auto text-center relative z-10">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-zinc-800 bg-zinc-900/50 text-zinc-300 text-sm font-medium mb-8">
+                <span class="flex h-2 w-2 rounded-full bg-blue-500"></span>
+                Welcome to the new standard in web building
+            </div>
+
+            <h1 class="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tighter text-white mb-6 leading-tight">
+                Build the web. <br class="hidden md:block" />
+                <span class="text-transparent bg-clip-text bg-gradient-to-b from-zinc-300 to-zinc-600">
+                    Faster than ever.
+                </span>
+            </h1>
+
+            <p class="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto mb-10">
+                Joex is the professional website builder for ambitious teams. Create stunning, high-performance websites with a visual canvas that scales to any complexity.
+            </p>
+
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+                <a href="#" class="w-full sm:w-auto px-8 py-4 bg-white text-black font-semibold rounded-full hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2">
+                    Start Building <i class="ph ph-arrow-right"></i>
+                </a>
+            </div>
+
+            <!-- Video Section -->
+            <div class="relative max-w-4xl mx-auto rounded-xl overflow-hidden border border-zinc-800 shadow-2xl">
+                <div class="bg-zinc-900 border-b border-zinc-800 px-4 py-3 flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    <div class="ml-4 text-xs text-zinc-500 font-mono">Joex Overview</div>
+                </div>
+                <div class="aspect-video bg-black relative">
+                    <video controls autoplay muted loop class="w-full h-full object-cover" src="https://d.top4top.io/m_37816o9t70.mp4"></video>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trusted By -->
+    <section class="py-10 border-b border-zinc-800/50 bg-[#000000]">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+            <p class="text-sm text-zinc-500 font-medium mb-8 uppercase tracking-widest">Trusted by innovative teams worldwide</p>
+            <div class="flex flex-wrap justify-center gap-8 md:gap-16 opacity-50 grayscale">
+                <div class="text-xl font-bold font-mono text-white">ACME Corp</div>
+                <div class="text-xl font-bold font-sans text-white">GlobalTech</div>
+                <div class="text-xl font-bold italic text-white">Nexus</div>
+                <div class="text-xl font-bold tracking-widest text-white">PULSE</div>
+                <div class="text-xl font-bold font-serif text-white">Apex</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Feature Grid -->
+    <section class="py-20 border-t border-zinc-800/50 bg-[#0a0a0a]" id="features">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="mb-16">
+                <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4">Engineered for growth.</h2>
+                <p class="text-zinc-400 text-lg max-w-2xl">Everything you need to build logic, design systems, and fast scalable landing pages without touching a line of code until you need to.</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Feature 1 -->
+                <div class="p-8 border border-zinc-800 bg-[#000000] rounded-2xl hover:border-zinc-700 transition duration-300">
+                    <i class="ph ph-lightning text-3xl text-blue-500 mb-6 block"></i>
+                    <h3 class="text-xl font-semibold mb-3 text-white">Lightning Fast</h3>
+                    <p class="text-zinc-400">Deployed automatically on edge networks for instant global performance.</p>
+                </div>
+                <!-- Feature 2 -->
+                <div class="p-8 border border-zinc-800 bg-[#000000] rounded-2xl hover:border-zinc-700 transition duration-300">
+                    <i class="ph ph-code text-3xl text-blue-500 mb-6 block"></i>
+                    <h3 class="text-xl font-semibold mb-3 text-white">Full Customization</h3>
+                    <p class="text-zinc-400">Visual drag-and-drop combined with deep layout properties.</p>
+                </div>
+                <!-- Feature 3 -->
+                <div class="p-8 border border-zinc-800 bg-[#000000] rounded-2xl hover:border-zinc-700 transition duration-300">
+                    <i class="ph ph-database text-3xl text-blue-500 mb-6 block"></i>
+                    <h3 class="text-xl font-semibold mb-3 text-white">Dynamic Data</h3>
+                    <p class="text-zinc-400">Connect to built-in databases to build user authentication flows.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="py-20 border-t border-zinc-800/50 bg-[#0a0a0a]">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                <div>
+                    <div class="text-4xl md:text-5xl font-bold text-white mb-2">1M+</div>
+                    <div class="text-zinc-400">Active Users</div>
+                </div>
+                <div>
+                    <div class="text-4xl md:text-5xl font-bold text-white mb-2">50M</div>
+                    <div class="text-zinc-400">Sites Built</div>
+                </div>
+                <div>
+                    <div class="text-4xl md:text-5xl font-bold text-white mb-2">99.9%</div>
+                    <div class="text-zinc-400">Uptime</div>
+                </div>
+                <div>
+                    <div class="text-4xl md:text-5xl font-bold text-white mb-2">0.5s</div>
+                    <div class="text-zinc-400">Avg Load Time</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="py-24 border-t border-zinc-800/50 bg-[#000000]">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4 text-white">Loved by creators</h2>
+            </div>
+            <div class="grid md:grid-cols-3 gap-6">
+                <!-- Testimonial 1 -->
+                <div class="p-8 border border-zinc-800 rounded-2xl bg-zinc-900/30">
+                    <div class="flex text-yellow-500 mb-4 gap-1">
+                        <i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i><i class="ph-fill ph-star"></i>
+                    </div>
+                    <p class="text-zinc-300 mb-6">"This platform has completely transformed how our team builds."</p>
+                    <div class="flex items-center gap-3">
+                        <div class="font-semibold text-white">Sarah Jenkins</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section class="py-24 border-t border-zinc-800/50 bg-[#0a0a0a]" id="pricing">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-5xl font-bold tracking-tight mb-4 text-white">Pricing</h2>
+            </div>
+            <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                <!-- Pro -->
+                <div class="p-8 border border-blue-500 rounded-2xl bg-[#000000] relative">
+                    <h3 class="text-xl font-semibold text-white mb-2">Pro</h3>
+                    <div class="text-3xl font-bold text-white mb-6">$19<span class="text-sm font-normal text-zinc-500">/mo</span></div>
+                    <ul class="space-y-4 mb-8 text-zinc-400 text-sm">
+                        <li class="flex items-center gap-2"><i class="ph-fill ph-check-circle text-blue-500"></i> Unlimited projects</li>
+                    </ul>
+                    <button class="w-full py-3 rounded-full bg-blue-500 text-white font-semibold">Subscribe Now</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-zinc-800/50 py-12">
+        <div class="max-w-7xl mx-auto px-6 text-center text-zinc-500 text-sm">
+            Joex &copy; 2026
+        </div>
+    </footer>
+</body>
+</html>
