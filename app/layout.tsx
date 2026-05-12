@@ -1,10 +1,22 @@
-import type {Metadata} from 'next';
+import type {Metadata, Viewport} from 'next';
 import './globals.css'; // Global styles
 import { AuthProvider } from '@/lib/auth-context';
 
 export const metadata: Metadata = {
-  title: 'WebWeaver - Mini Website Builder',
+  title: 'Joex - Build the web',
   description: 'A drag-and-drop website builder allowing users to create and publish their own web pages.',
+  appleWebApp: {
+    capable: true,
+    title: 'Joex',
+    statusBarStyle: 'black-translucent',
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#000000',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
