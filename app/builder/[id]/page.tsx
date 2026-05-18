@@ -1754,8 +1754,7 @@ export default function BuilderPage() {
             >
               <div
                 ref={canvasRef}
-                className="w-full max-w-4xl mx-auto min-h-[800px] bg-white shadow-sm relative"
-                style={{ width: "800px" }}
+                className="w-full h-full min-h-screen bg-white shadow-sm relative overflow-hidden"
               >
                 <BuilderCanvasMap
                   canvasRef={canvasRef}
@@ -1852,14 +1851,59 @@ export default function BuilderPage() {
                       </div>
                     )}
 
-                    {selectedElement.style?.width !== undefined && (
+                    {/* Position and Animation Edit */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-medium text-gray-900 border-b pb-2">
+                        Position & Animation
+                      </h3>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            X Position (px)
+                          </label>
+                          <input
+                            type="number"
+                            value={selectedElement.position?.x || 0}
+                            onChange={(e) =>
+                              updateElement(selectedElement.id, {
+                                position: {
+                                  ...selectedElement.position,
+                                  x: Number(e.target.value),
+                                  y: selectedElement.position?.y || 0,
+                                },
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded-md text-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 mb-1">
+                            Y Position (px)
+                          </label>
+                          <input
+                            type="number"
+                            value={selectedElement.position?.y || 0}
+                            onChange={(e) =>
+                              updateElement(selectedElement.id, {
+                                position: {
+                                  ...selectedElement.position,
+                                  x: selectedElement.position?.x || 0,
+                                  y: Number(e.target.value),
+                                },
+                              })
+                            }
+                            className="w-full px-3 py-2 border rounded-md text-sm"
+                          />
+                        </div>
+                      </div>
+                      
                       <div>
                         <label className="block text-xs text-gray-600 mb-1">
                           Width
                         </label>
                         <input
                           type="text"
-                          value={selectedElement.style?.width || '100%'}
+                          value={selectedElement.style?.width || 'auto'}
                           onChange={(e) =>
                             updateElement(selectedElement.id, {
                               style: {
@@ -1869,11 +1913,10 @@ export default function BuilderPage() {
                             })
                           }
                           className="w-full px-3 py-2 border rounded-md text-sm"
+                          placeholder="e.g. 100px, 100%, w-full"
                         />
                       </div>
-                    )}
-
-                    {selectedElement.style?.height !== undefined && (
+                      
                       <div>
                         <label className="block text-xs text-gray-600 mb-1">
                           Height
@@ -1890,9 +1933,42 @@ export default function BuilderPage() {
                             })
                           }
                           className="w-full px-3 py-2 border rounded-md text-sm"
+                          placeholder="e.g. 100px, auto"
                         />
                       </div>
-                    )}
+
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">
+                          Animation
+                        </label>
+                        <select
+                          value={(selectedElement.customCss || "").match(/animate-[a-zA-Z0-9_-]+/)?.[0] || ""}
+                          onChange={(e) => {
+                            let currentClasses = selectedElement.customCss || "";
+                            currentClasses = currentClasses.replace(/animate-[a-zA-Z0-9_-]+/g, "").trim();
+                            if (e.target.value) {
+                              currentClasses = `${currentClasses} ${e.target.value}`.trim();
+                            }
+                            updateElement(selectedElement.id, {
+                              customCss: currentClasses,
+                            });
+                          }}
+                          className="w-full px-3 py-2 border rounded-md text-sm"
+                        >
+                          <option value="">None</option>
+                          <option value="animate-fadeIn">Fade In</option>
+                          <option value="animate-fadeInDown">Fade In Down</option>
+                          <option value="animate-fadeInUp">Fade In Up</option>
+                          <option value="animate-bounce">Bounce</option>
+                          <option value="animate-pulse">Pulse</option>
+                          <option value="animate-zoomIn">Zoom In</option>
+                          <option value="animate-slideInLeft">Slide In Left</option>
+                          <option value="animate-slideInRight">Slide In Right</option>
+                          <option value="animate-flip">Flip</option>
+                          <option value="animate-heartBeat">Heartbeat</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Database Connection */}
