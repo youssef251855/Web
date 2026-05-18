@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
 import { useBuilderStore, ElementType, PageElement } from "@/lib/builder-store";
-import { shallow } from 'zustand/shallow';
+import { useShallow } from 'zustand/react/shallow';
 import { motion } from "motion/react";
 import {
   ArrowLeft,
@@ -179,6 +179,20 @@ const SIDEBAR_CATEGORIES = [
   },
 ];
 
+const BuilderElementContainer = memo(function BuilderElementContainer({
+  id,
+  canvasRef,
+  setMobileView,
+}: {
+  id: string;
+  canvasRef: React.RefObject<HTMLDivElement | null>;
+  setMobileView: (view: "elements" | "canvas" | "properties") => void;
+}) {
+  const element = useBuilderStore((state) => state.elements.find((e) => e.id === id));
+  if (!element) return null;
+  return <BuilderElement element={element} canvasRef={canvasRef} setMobileView={setMobileView} />;
+});
+
 const BuilderCanvasMap = memo(function BuilderCanvasMap({
   canvasRef,
   setMobileView,
@@ -186,13 +200,13 @@ const BuilderCanvasMap = memo(function BuilderCanvasMap({
   canvasRef: React.RefObject<HTMLDivElement | null>;
   setMobileView: (view: "elements" | "canvas" | "properties") => void;
 }) {
-  const elements = useBuilderStore((s) => s.elements);
+  const elementIds = useBuilderStore(useShallow((s) => s.elements.map(e => e.id)));
   return (
     <>
-      {elements.map((el) => (
-        <BuilderElement
-          key={el.id}
-          element={el}
+      {elementIds.map((id) => (
+        <BuilderElementContainer
+          key={id}
+          id={id}
           canvasRef={canvasRef}
           setMobileView={setMobileView}
         />
@@ -469,7 +483,7 @@ export default function BuilderPage() {
             }, 2000);
           }
         },
-        { equalityFn: shallow }
+        { equalityFn: (a, b) => a[0] === b[0] && a[1] === b[1] && a[2] === b[2] }
     );
 
     return () => {

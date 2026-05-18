@@ -11,34 +11,82 @@ BEGIN
   IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='pages' and column_name='userId') THEN
       ALTER TABLE public.pages RENAME COLUMN "userId" TO user_id;
   END IF;
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='pages' and column_name='userid') THEN
+      ALTER TABLE public.pages RENAME COLUMN userid TO user_id;
+  END IF;
   
   IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='pages' and column_name='createdAt') THEN
       ALTER TABLE public.pages RENAME COLUMN "createdAt" TO created_at;
+  END IF;
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='pages' and column_name='createdat') THEN
+      ALTER TABLE public.pages RENAME COLUMN createdat TO created_at;
   END IF;
   
   IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='tables' and column_name='userId') THEN
       ALTER TABLE public.tables RENAME COLUMN "userId" TO user_id;
   END IF;
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='tables' and column_name='userid') THEN
+      ALTER TABLE public.tables RENAME COLUMN userid TO user_id;
+  END IF;
 
   IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='records' and column_name='userId') THEN
       ALTER TABLE public.records RENAME COLUMN "userId" TO user_id;
+  END IF;
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='records' and column_name='userid') THEN
+      ALTER TABLE public.records RENAME COLUMN userid TO user_id;
   END IF;
 
   IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='records' and column_name='tableId') THEN
       ALTER TABLE public.records RENAME COLUMN "tableId" TO table_id;
   END IF;
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='records' and column_name='tableid') THEN
+      ALTER TABLE public.records RENAME COLUMN tableid TO table_id;
+  END IF;
 
   IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='records' and column_name='createdAt') THEN
       ALTER TABLE public.records RENAME COLUMN "createdAt" TO created_at;
+  END IF;
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='records' and column_name='createdat') THEN
+      ALTER TABLE public.records RENAME COLUMN createdat TO created_at;
   END IF;
 
   IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='user_settings' and column_name='userId') THEN
       ALTER TABLE public.user_settings RENAME COLUMN "userId" TO user_id;
   END IF;
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='user_settings' and column_name='userid') THEN
+      ALTER TABLE public.user_settings RENAME COLUMN userid TO user_id;
+  END IF;
   
   IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='site_users' and column_name='ownerId') THEN
       ALTER TABLE public.site_users RENAME COLUMN "ownerId" TO owner_id;
   END IF;
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='site_users' and column_name='ownerid') THEN
+      ALTER TABLE public.site_users RENAME COLUMN ownerid TO owner_id;
+  END IF;
+  
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='files' and column_name='userId') THEN
+      ALTER TABLE public.files RENAME COLUMN "userId" TO user_id;
+  END IF;
+  IF EXISTS(SELECT 1 FROM information_schema.columns WHERE table_name='files' and column_name='userid') THEN
+      ALTER TABLE public.files RENAME COLUMN userid TO user_id;
+  END IF;
+
+  -- Ensure columns exist in case tables were created with an older schema
+  ALTER TABLE public.pages ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+  ALTER TABLE public.pages ADD COLUMN IF NOT EXISTS custom_domain TEXT UNIQUE;
+  
+  ALTER TABLE public.tables ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+  
+  ALTER TABLE public.records ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+  ALTER TABLE public.records ADD COLUMN IF NOT EXISTS table_id UUID REFERENCES public.tables(id) ON DELETE CASCADE;
+  
+  ALTER TABLE public.user_settings ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE;
+  
+  ALTER TABLE public.site_users ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+  ALTER TABLE public.site_users ADD COLUMN IF NOT EXISTS name TEXT;
+  ALTER TABLE public.site_users ADD COLUMN IF NOT EXISTS role TEXT;
+  
+  ALTER TABLE public.files ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
 END $$;
 
 -- 1. Users Table
@@ -102,6 +150,7 @@ CREATE TABLE IF NOT EXISTS public.site_users (
     owner_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT,
     password TEXT,
+    name TEXT,
     role TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );

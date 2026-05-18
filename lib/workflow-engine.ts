@@ -158,12 +158,22 @@ export const executeWorkflow = async (
           }
           break;
         case 'api_request':
+          const headers = resolvePayload(step.params.headers || {});
+          if (step.params.method && step.params.method !== 'GET' && !headers['Content-Type']) {
+             headers['Content-Type'] = 'application/json';
+          }
           const res = await fetch(resolvePayload(step.params.url), {
             method: step.params.method || 'GET',
-            headers: resolvePayload(step.params.headers || {}),
+            headers: headers,
             body: step.params.method && step.params.method !== 'GET' ? JSON.stringify(resolvePayload(step.params.body)) : undefined
           });
-          const apiData = await res.json();
+          const text = await res.text();
+          let apiData;
+          try {
+             apiData = JSON.parse(text);
+          } catch(e) {
+             apiData = text;
+          }
           if (step.params.saveToVariableId) {
             context.setVariable(step.params.saveToVariableId, apiData);
           }

@@ -273,6 +273,7 @@ export default function Renderer({
             owner_id: userId,
             email: formData.get("Email") as string,
             password: formData.get("Password") as string,
+            name: formData.get("Name") as string || null,
             role: "user",
           })
           .select('id')
@@ -284,8 +285,9 @@ export default function Renderer({
         setVariable("currentUser", { id: data.id, email: formData.get("Email") });
         (e.target as HTMLFormElement).reset();
         await executeElementEvents(element, "onSubmit");
-      } catch (e) {
-        console.error(e);
+      } catch (e: any) {
+        console.error('Signup error:', e);
+        alert(e.message || "An error occurred during signup.");
       }
       setIsSubmitting(false);
     } else if (
@@ -312,8 +314,9 @@ export default function Renderer({
         } else {
           alert("Invalid credentials");
         }
-      } catch (e) {
-        console.error(e);
+      } catch (e: any) {
+        console.error('Login error:', e);
+        alert(e.message || "An error occurred during login.");
       }
       setIsSubmitting(false);
     }
@@ -648,7 +651,10 @@ export default function Renderer({
                 Action successful!
               </div>
             )}
-            {element.type === "form" && (element.content?.fields || [{name:'Name', type:'text'}, {name:'Email', type:'email'}]).map((field: any, i: number) => (
+            {element.type === "form" && ((element.content as any)?.fields || [
+              {name:'Name', type:'text'}, 
+              {name:'Email', type:'email'}
+            ]).map((field: any, i: number) => (
               <input
                 key={i}
                 type={field.type}
@@ -666,40 +672,28 @@ export default function Renderer({
                 }}
               />
             ))}
-            {element.type === "auth_form" && (
-              <>
-                <input
-                  type="email"
-                  name="Email"
-                  placeholder="Email"
-                  required
-                  disabled={isBuilderMode}
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    marginBottom: "10px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                    pointerEvents: isBuilderMode ? "none" : "auto",
-                  }}
-                />
-                <input
-                  type="password"
-                  name="Password"
-                  placeholder="Password"
-                  required
-                  disabled={isBuilderMode}
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    marginBottom: "10px",
-                    border: "1px solid #ccc",
-                    borderRadius: "4px",
-                    pointerEvents: isBuilderMode ? "none" : "auto",
-                  }}
-                />
-              </>
-            )}
+            {element.type === "auth_form" && ((element.content as any)?.fields || [
+              {name:'Name', type:'text'}, 
+              {name:'Email', type:'email'}, 
+              {name:'Password', type:'password'}
+            ]).map((field: any, i: number) => (
+              <input
+                key={i}
+                type={field.type}
+                name={field.name}
+                placeholder={field.name}
+                required
+                disabled={isBuilderMode}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  marginBottom: "10px",
+                  border: "1px solid #ccc",
+                  borderRadius: "4px",
+                  pointerEvents: isBuilderMode ? "none" : "auto",
+                }}
+              />
+            ))}
             <button
               type="submit"
               disabled={isSubmitting || isBuilderMode}
@@ -1335,27 +1329,71 @@ export default function Renderer({
     }
   };
 
+  const renderContentRef = React.useRef(renderContent);
+  useEffect(() => {
+    renderContentRef.current = renderContent;
+  });
+
   return (
     <>
       {elements.map((el) => {
-        const content = renderContent(el);
-        if (isBuilderMode) {
-          return <React.Fragment key={el.id}>{content}</React.Fragment>;
-        }
         return (
-          <div
+          <MemoizedElement
             key={el.id}
-            style={{
-              position: "absolute",
-              left: el.position.x,
-              top: el.position.y,
-            }}
-            className="element-container"
-          >
-            {content}
-          </div>
+            el={el}
+            isBuilderMode={isBuilderMode}
+            dataSourceStr={JSON.stringify(dataSources[el.id] || null)}
+            isSubmittingStr={String(isSubmitting)}
+            formSuccessStr={String(formSuccess[el.id] || false)}
+            variableStr={JSON.stringify(variables)}
+            renderContent={renderContent}
+          />
         );
       })}
     </>
   );
 }
+
+const MemoizedElement = React.memo(
+  ({
+    el,
+    isBuilderMode,
+    renderContent,
+  }: {
+    el: PageElement;
+    isBuilderMode: boolean;
+    dataSourceStr: string;
+    isSubmittingStr: string;
+    formSuccessStr: string;
+    variableStr: string;
+    renderContent: (el: PageElement) => React.ReactNode;
+  }) => {
+    const content = renderContent(el);
+    if (isBuilderMode) {
+      return <React.Fragment>{content}</React.Fragment>;
+    }
+    return (
+      <div
+        style={{
+          position: "absolute",
+          left: el.position.x,
+          top: el.position.y,
+        }}
+        className="element-container"
+      >
+        {content}
+      </div>
+    );
+  },
+  (prev, next) => {
+    return (
+      prev.el === next.el &&
+      prev.isBuilderMode === next.isBuilderMode &&
+      prev.dataSourceStr === next.dataSourceStr &&
+      prev.isSubmittingStr === next.isSubmittingStr &&
+      prev.formSuccessStr === next.formSuccessStr &&
+      prev.variableStr === next.variableStr
+    );
+  }
+);
+MemoizedElement.displayName = "MemoizedElement";
