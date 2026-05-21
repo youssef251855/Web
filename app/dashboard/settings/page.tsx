@@ -3,12 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { Settings, Save, Image as ImageIcon } from 'lucide-react';
+import { Settings as SettingsIcon, Save } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const [cloudinaryCloudName, setCloudinaryCloudName] = useState('');
-  const [cloudinaryUploadPreset, setCloudinaryUploadPreset] = useState('');
+  const [appName, setAppName] = useState('My AI Studio App');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -24,8 +23,7 @@ export default function SettingsPage() {
           .maybeSingle(); 
 
         if (data && data.settings) {
-          setCloudinaryCloudName(data.settings.cloudinaryCloudName || '');
-          setCloudinaryUploadPreset(data.settings.cloudinaryUploadPreset || '');
+          setAppName(data.settings.appName || 'My AI Studio App');
         }
       } catch (error) {
         console.error("Error fetching settings", error);
@@ -47,8 +45,7 @@ export default function SettingsPage() {
         .upsert({
           user_id: user.id,
           settings: {
-            cloudinaryCloudName,
-            cloudinaryUploadPreset,
+            appName,
           },
         }, { onConflict: 'user_id' });
         
@@ -69,7 +66,7 @@ export default function SettingsPage() {
     <div className="p-8 max-w-4xl mx-auto w-full">
       <div className="flex justify-between items-center mb-8">
         <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-          <Settings className="w-6 h-6 mr-2" /> Settings
+          <SettingsIcon className="w-6 h-6 mr-2" /> Settings
         </h2>
       </div>
 
@@ -77,30 +74,17 @@ export default function SettingsPage() {
         <form onSubmit={handleSave} className="space-y-6">
           <div>
             <h3 className="text-lg font-semibold border-b pb-2 mb-4 flex items-center">
-              <ImageIcon className="w-5 h-5 mr-2 text-blue-500" /> Cloudinary Integration
+              General Settings
             </h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Connect your Cloudinary account to allow direct image uploads from the builder.
-            </p>
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Cloud Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">App Name</label>
                 <input
                   type="text"
-                  value={cloudinaryCloudName}
-                  onChange={e => setCloudinaryCloudName(e.target.value)}
+                  value={appName}
+                  onChange={e => setAppName(e.target.value)}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  placeholder="e.g. dcxyz123"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Upload Preset (Unsigned)</label>
-                <input
-                  type="text"
-                  value={cloudinaryUploadPreset}
-                  onChange={e => setCloudinaryUploadPreset(e.target.value)}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition"
-                  placeholder="e.g. my_preset"
+                  placeholder="My AI Studio App"
                 />
               </div>
             </div>

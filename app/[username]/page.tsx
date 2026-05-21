@@ -13,6 +13,9 @@ export default function PublicPage() {
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [variables, setVariables] = useState<AppVariable[]>([]);
+  const [pageTitle, setPageTitle] = useState<string>('');
+  const [pageDescription, setPageDescription] = useState<string>('');
+  const [canonicalUrl, setCanonicalUrl] = useState<string>('');
 
   const setVariable = (id: string, value: any) => {
     setVariables(prev => {
@@ -31,6 +34,13 @@ export default function PublicPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const currentUsername = Array.isArray(username) ? username[0] : (username || '');
+      setCanonicalUrl(`${window.location.origin}/${encodeURIComponent(currentUsername)}`);
+    }
+  }, [username]);
 
   useEffect(() => {
     const fetchPage = async () => {
@@ -64,7 +74,7 @@ export default function PublicPage() {
 
         let { data: pageSnap, error: pageError } = await supabase
           .from('pages')
-          .select('content')
+          .select('content, title, description')
           .eq('user_id', fetchedUserId)
           .eq('slug', 'home')
           .limit(1);
@@ -73,7 +83,7 @@ export default function PublicPage() {
           // Fallback to any page
           const fallbackQuery = await supabase
             .from('pages')
-            .select('content')
+            .select('content, title, description')
             .eq('user_id', fetchedUserId)
             .limit(1);
           pageSnap = fallbackQuery.data;
@@ -87,6 +97,8 @@ export default function PublicPage() {
         }
 
         const pageData = pageSnap[0];
+        setPageTitle(pageData.title || '');
+        setPageDescription(pageData.description || '');
         const content = JSON.parse(pageData.content);
         setElements(content.elements || []);
         setVariables(content.variables || []);
@@ -108,9 +120,25 @@ export default function PublicPage() {
   if (error || !userId) return <div className="min-h-screen flex items-center justify-center text-red-500">{error || 'User ID missing'}</div>;
 
   const renderedUsername = Array.isArray(username) ? username[0] : (username || '');
+  const decodedUsername = decodeURIComponent(renderedUsername);
+  const displayTitle = pageTitle || `${decodedUsername} - Portfolio`;
+  const displayDescription = pageDescription || `${decodedUsername}'s custom page built with Joex`;
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
+      <title>{displayTitle}</title>
+      <meta name="description" content={displayDescription} />
+      {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+
+      <meta property="og:title" content={displayTitle} />
+      <meta property="og:description" content={displayDescription} />
+      <meta property="og:type" content="website" />
+      {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={displayTitle} />
+      <meta name="twitter:description" content={displayDescription} />
+
       <div className="w-full max-w-4xl mx-auto min-h-screen relative">
         <Renderer 
            elements={elements}

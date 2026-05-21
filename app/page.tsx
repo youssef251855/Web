@@ -262,7 +262,7 @@ export default function Home() {
                   <Star className="w-5 h-5 fill-current" />
                   <Star className="w-5 h-5 fill-current" />
                 </div>
-                <p className="text-zinc-300 mb-6">"This platform has completely transformed how our team builds and deploys landing pages. It's incredibly fast and intuitive."</p>
+                <p className="text-zinc-300 mb-6">&quot;This platform has completely transformed how our team builds and deploys landing pages. It&apos;s incredibly fast and intuitive.&quot;</p>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-zinc-800"></div>
                   <div>

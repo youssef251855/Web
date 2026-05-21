@@ -22,6 +22,14 @@ export default function DataSearch({ tableId, placeholder = "Search..." }: { tab
     setResults([]);
     setHasSearched(true);
 
+    const isValidUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tableId);
+
+    if (!tableId || !isValidUuid) {
+      setLoading(false);
+      setError('⚠️ لا يوجد جدول بيانات مرتبطة بهذا البحث. يرجى تفعيل "توصيل قاعدة البيانات" (Database Connection) واختيار جدول صحيح من قائمة الخصائص الجانبية.');
+      return;
+    }
+
     try {
       const term = searchTerm.trim().toLowerCase();
       
@@ -40,9 +48,14 @@ export default function DataSearch({ tableId, placeholder = "Search..." }: { tab
         
         setResults(matchedRecords);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('An error occurred while connecting to the database.');
+      const msg = String(err?.message || '').toLowerCase();
+      if (msg.includes('uuid') || msg.includes('syntax') || msg.includes('cast')) {
+        setError('⚠️ تنسيق معرف الجدول غير صالح أو تم حذفه. يرجى اختيار جدول صحيح من قسم الاتصال بقاعدة البيانات في قائمة الخصائص.');
+      } else {
+        setError('⚠️ حدث خطأ أثناء الاتصال بقاعدة البيانات: ' + (err?.message || 'يرجى المحاولة لاحقاً.'));
+      }
     } finally {
       setLoading(false);
     }

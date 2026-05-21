@@ -26,6 +26,7 @@ export type ElementType =
   | "progress"
   | "social"
   | "form"
+  | "blank_form"
   | "input"
   | "table"
   | "code"
@@ -52,6 +53,12 @@ export type ElementType =
   | "auth_form"
   | "loading_screen"
   | "nav_bar"
+  | "simple_list"
+  | "card_list"
+  | "image_list"
+  | "masonry_list"
+  | "horizontal_list"
+  | "custom_list"
   | "product_card"
   | "blog_card"
   | "stats_grid"
@@ -73,7 +80,12 @@ export type ElementType =
   | "dropdown_menu"
   | "range_slider"
   | "label"
-  | "exam_result_lookup";
+  | "exam_result_lookup"
+  | "bento_grid"
+  | "trend_stat"
+  | "social_share"
+  | "circular_progress"
+  | "dynamic_tabs";
 
 export interface Position {
   x: number;
@@ -145,6 +157,7 @@ export interface DataSource {
   filters?: any[];
   limit?: number;
   sort?: { field: string; direction: "asc" | "desc" };
+  fieldName?: string;
 }
 
 export interface DataMapping {
@@ -167,6 +180,7 @@ export interface PageElement {
   customId?: string; // Allows CSS targeting
 
   dataSource?: DataSource;
+  dataSources?: DataSource[];
   dataMapping?: DataMapping;
 }
 
@@ -216,6 +230,25 @@ const defaultContent: Record<ElementType, any> = {
   icon: "star",
   spacer: null,
   list: ["Item 1", "Item 2", "Item 3"],
+  simple_list: ["Item 1", "Item 2", "Item 3"],
+  card_list: [
+    { title: "Card 1", description: "Desc 1" },
+    { title: "Card 2", description: "Desc 2" }
+  ],
+  image_list: [
+    { title: "Image 1", image: "https://picsum.photos/seed/img1/200/200" },
+    { title: "Image 2", image: "https://picsum.photos/seed/img2/200/200" }
+  ],
+  masonry_list: [
+    { title: "Item 1", image: "https://picsum.photos/seed/mas1/200/300" },
+    { title: "Item 2", image: "https://picsum.photos/seed/mas2/200/200" },
+    { title: "Item 3", image: "https://picsum.photos/seed/mas3/200/400" }
+  ],
+  horizontal_list: ["Item 1", "Item 2", "Item 3"],
+  custom_list: [
+    { title: "Custom 1", subtitle: "Sub 1" },
+    { title: "Custom 2", subtitle: "Sub 2" }
+  ],
   quote: "This is an inspiring quote.",
   badge: "New",
   map: "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3151.83543450937!2d144.9537353153166!3d-37.81720997975171!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x6ad65d4c2b349649%3A0xb6899234e561db11!2sEnvato!5e0!3m2!1sen!2sau!4v1628684675000!5m2!1sen!2sau",
@@ -240,6 +273,7 @@ const defaultContent: Record<ElementType, any> = {
   progress: 75,
   social: ["twitter", "facebook", "instagram"],
   form: { title: "Contact Us", buttonText: "Submit" },
+  blank_form: { title: "Blank Form", buttonText: "Submit Form" },
   input: { type: "text", placeholder: "Enter text...", defaultValue: "", name: "" },
   table: {
     headers: ["Name", "Age", "City"],
@@ -352,7 +386,45 @@ const defaultContent: Record<ElementType, any> = {
   },
   range_slider: { label: "Volume", min: 0, max: 100, value: 50 },
   label: "Label Text",
-  exam_result_lookup: { tableId: "" }
+  exam_result_lookup: { tableId: "" },
+  bento_grid: {
+    title: "Our Key Features",
+    subtitle: "Highly integrated services and values built for you",
+    items: [
+      { id: "1", title: "Realtime Analytics", description: "Monitor visits and conversions instantly.", size: "lg", badge: "Live", color: "#3b82f6" },
+      { id: "2", title: "Cloud Encryption", description: "Your data is secured with AES-256.", size: "sm", badge: "Secure", color: "#10b981" },
+      { id: "3", title: "Global CDN", description: "Lightning fast loads from anywhere.", size: "sm", badge: "Fast", color: "#8b5cf6" },
+      { id: "4", title: "Seamless API Integration", description: "Connect all your software tools smoothly.", size: "md", badge: "PRO", color: "#f59e0b" }
+    ]
+  },
+  trend_stat: {
+    label: "Monthly Revenue",
+    value: "$45,231.89",
+    change: "+12.4%",
+    isPositive: true,
+    timeframe: "compared to last month"
+  },
+  social_share: {
+    title: "Share this page",
+    platforms: ["twitter", "facebook", "whatsapp", "linkedin", "copy"]
+  },
+  circular_progress: {
+    label: "Storage Space",
+    percentage: 67,
+    strokeColor: "#3b82f6",
+    trackColor: "#e5e7eb",
+    size: 120,
+    strokeWidth: 8
+  },
+  dynamic_tabs: {
+    activeTab: "Tab A",
+    variableName: "selected_section",
+    tabs: [
+      { id: "tab-a", label: "Tab A", value: "content_a" },
+      { id: "tab-b", label: "Tab B", value: "content_b" },
+      { id: "tab-c", label: "Tab C", value: "content_c" }
+    ]
+  }
 };
 
 const defaultStyle: Record<ElementType, ElementStyle> = {
@@ -376,6 +448,12 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
   icon: { fontSize: "24px", color: "#6b7280" },
   spacer: { width: "100%", height: "50px" },
   list: { fontSize: "16px", color: "#333333" },
+  simple_list: { fontSize: "16px", color: "#333333", listStyleType: "disc" },
+  card_list: { width: "100%", display: "flex", flexDirection: "column", gap: "10px" },
+  image_list: { width: "100%", display: "flex", flexDirection: "column", gap: "10px" },
+  masonry_list: { width: "100%", columnCount: 2, columnGap: "10px" },
+  horizontal_list: { width: "100%", display: "flex", flexDirection: "row", gap: "10px", overflowX: "auto" },
+  custom_list: { width: "100%", display: "flex", flexDirection: "column", gap: "10px" },
   quote: {
     fontSize: "18px",
     color: "#4b5563",
@@ -438,6 +516,13 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
   },
   social: { display: "flex", fontSize: "24px", color: "#3b82f6" },
   form: {
+    width: "400px",
+    padding: "24px",
+    backgroundColor: "#ffffff",
+    borderRadius: "8px",
+    border: "1px solid #e5e7eb",
+  },
+  blank_form: {
     width: "400px",
     padding: "24px",
     backgroundColor: "#ffffff",
@@ -665,7 +750,12 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
   },
   range_slider: { width: "200px" },
   label: { fontSize: "14px", color: "#374151", fontWeight: "medium" },
-  exam_result_lookup: { width: "100%", padding: "16px" }
+  exam_result_lookup: { width: "100%", padding: "16px" },
+  bento_grid: { width: "100%", padding: "24px", borderRadius: "12px", backgroundColor: "#f9fafb" },
+  trend_stat: { width: "240px", padding: "16px", borderRadius: "8px", backgroundColor: "#ffffff" },
+  social_share: { width: "auto", display: "flex", gap: "12px", padding: "8px" },
+  circular_progress: { width: "150px", padding: "16px", borderRadius: "12px", backgroundColor: "#ffffff", textAlign: "center" },
+  dynamic_tabs: { width: "100%", padding: "12px", display: "flex", gap: "8px" }
 };
 
 export const useBuilderStore = create<BuilderState>()(subscribeWithSelector((set) => ({

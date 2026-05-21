@@ -294,3 +294,25 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.site_users;
 
 -- Reload the PostgREST schema cache to ensure the API sees the newly created tables immediately
 NOTIFY pgrst, 'reload schema';
+
+-- Create a storage bucket for uploads if it doesn't exist
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('files', 'files', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Policies for storage.objects
+DROP POLICY IF EXISTS "Public Access" ON storage.objects;
+CREATE POLICY "Public Access" 
+ON storage.objects FOR SELECT USING (bucket_id = 'files');
+
+DROP POLICY IF EXISTS "Anyone can upload" ON storage.objects;
+CREATE POLICY "Anyone can upload" 
+ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'files');
+
+DROP POLICY IF EXISTS "Anyone can update" ON storage.objects;
+CREATE POLICY "Anyone can update" 
+ON storage.objects FOR UPDATE USING (bucket_id = 'files');
+
+DROP POLICY IF EXISTS "Anyone can delete" ON storage.objects;
+CREATE POLICY "Anyone can delete" 
+ON storage.objects FOR DELETE USING (bucket_id = 'files');

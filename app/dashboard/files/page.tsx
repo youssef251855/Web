@@ -9,9 +9,25 @@ export default function FilesPage() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchFiles = async () => {
+    setLoading(true);
+    setError(null);
+    const { data, error } = await supabase.from('files').select('*');
+    if (error) {
+      console.error('Error fetching files:', error);
+      setError(error.message);
+    } else {
+      setFiles(data || []);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const init = async () => {
       setLoading(true);
       setError(null);
       const { data, error } = await supabase.from('files').select('*');
+      if (!mounted) return;
       if (error) {
         console.error('Error fetching files:', error);
         setError(error.message);
@@ -20,10 +36,8 @@ export default function FilesPage() {
       }
       setLoading(false);
     };
-
-   
-  useEffect(() => {
-    fetchFiles();
+    init();
+    return () => { mounted = false; };
   }, []);
 
   return (
@@ -42,7 +56,7 @@ export default function FilesPage() {
         <ul className="mt-4 grid grid-cols-1 gap-4">
           {files.map((file) => (
             <li key={file.id} className="p-4 border rounded shadow-sm">
-              <p className="font-medium">{file.name}</p>
+              <p className="font-medium">{file.name || (file.url ? file.url.split('/').pop() : 'Unnamed File')}</p>
               <a
                 href={file.url}
                 target="_blank"

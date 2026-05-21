@@ -13,6 +13,9 @@ export default function PublicSlugPage() {
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [variables, setVariables] = useState<AppVariable[]>([]);
+  const [pageTitle, setPageTitle] = useState<string>('');
+  const [pageDescription, setPageDescription] = useState<string>('');
+  const [canonicalUrl, setCanonicalUrl] = useState<string>('');
 
   const setVariable = (id: string, value: any) => {
     setVariables(prev => {
@@ -31,6 +34,16 @@ export default function PublicSlugPage() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const currentUsername = Array.isArray(username) ? username[0] : (username || '');
+      const currentSlug = Array.isArray(slug) ? slug[0] : (slug || '');
+      const pathSegments = Array.isArray(path) ? path : (path ? [path] : []);
+      const pathPart = pathSegments.length > 0 ? '/' + pathSegments.map(p => typeof p === 'string' ? encodeURIComponent(p) : p).join('/') : '';
+      setCanonicalUrl(`${window.location.origin}/${encodeURIComponent(currentUsername)}/${encodeURIComponent(currentSlug)}${pathPart}`);
+    }
+  }, [username, slug, path]);
 
   useEffect(() => {
     const fetchPage = async () => {
@@ -76,7 +89,7 @@ export default function PublicSlugPage() {
 
         const { data: pageSnap, error: pageError } = await supabase
           .from('pages')
-          .select('content')
+          .select('content, title, description')
           .eq('user_id', fetchedUserId)
           .in('slug', slugVariations)
           .limit(1);
@@ -88,6 +101,8 @@ export default function PublicSlugPage() {
         }
 
         const pageData = pageSnap[0];
+        setPageTitle(pageData.title || '');
+        setPageDescription(pageData.description || '');
         const content = typeof pageData.content === 'string' ? JSON.parse(pageData.content) : pageData.content;
         
         let targetElements: PageElement[] = [];
@@ -136,10 +151,28 @@ export default function PublicSlugPage() {
   if (error || !userId) return <div className="min-h-screen flex items-center justify-center text-red-500">{error || 'User ID missing'}</div>;
 
   const renderedUsername = Array.isArray(username) ? username[0] : (username || '');
+  const decodedUsername = decodeURIComponent(renderedUsername);
   const renderedSlug = Array.isArray(slug) ? slug[0] : (slug || '');
+  const decodedSlug = decodeURIComponent(renderedSlug);
+
+  const displayTitle = pageTitle ? `${pageTitle} | ${decodedUsername}` : `${decodedSlug} - ${decodedUsername}`;
+  const displayDescription = pageDescription || `${decodedSlug} page on ${decodedUsername}'s site built with Joex`;
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden">
+      <title>{displayTitle}</title>
+      <meta name="description" content={displayDescription} />
+      {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+
+      <meta property="og:title" content={displayTitle} />
+      <meta property="og:description" content={displayDescription} />
+      <meta property="og:type" content="website" />
+      {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content={displayTitle} />
+      <meta name="twitter:description" content={displayDescription} />
+
       <div className="w-full max-w-4xl mx-auto min-h-screen relative">
         <Renderer 
            elements={elements}

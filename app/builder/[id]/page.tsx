@@ -10,6 +10,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { motion } from "motion/react";
 import {
   ArrowLeft,
+  Smartphone,
   Save,
   Type,
   Heading,
@@ -60,9 +61,14 @@ import {
   ToggleRight,
   PenTool,
   UserPlus,
-  Download,
+   Download,
+  LayoutGrid,
+  ArrowRight,
+  TrendingUp,
+  Percent,
+  Layers,
 } from "lucide-react";
-import CloudinaryUploadWidget from "@/components/CloudinaryUploadWidget";
+import SupabaseUploadWidget from "@/components/SupabaseUploadWidget";
 import ActionEditor from "@/components/ActionEditor";
 import Renderer from "@/components/Renderer";
 import ExportCodeModal from "@/components/ExportCodeModal";
@@ -88,6 +94,12 @@ const SIDEBAR_CATEGORIES = [
     name: "Lists & Data",
     items: [
       { type: "list", icon: List, label: "List" },
+      { type: "simple_list", icon: List, label: "Simple List" },
+      { type: "card_list", icon: LayoutGrid, label: "Card List" },
+      { type: "image_list", icon: ImageIcon, label: "Image List" },
+      { type: "masonry_list", icon: LayoutGrid, label: "Masonry List" },
+      { type: "horizontal_list", icon: ArrowRight, label: "Horizontal List" },
+      { type: "custom_list", icon: List, label: "Custom List" },
       { type: "table", icon: TableIcon, label: "Table" },
       { type: "badge", icon: Tag, label: "Badge" },
       { type: "accordion", icon: ChevronDown, label: "Accordion" },
@@ -128,6 +140,7 @@ const SIDEBAR_CATEGORIES = [
     name: "Forms & Auth",
     items: [
       { type: "form", icon: FormInput, label: "Form" },
+      { type: "blank_form", icon: FormInput, label: "Blank Form" },
       { type: "input", icon: Type, label: "Input" },
       { type: "label", icon: Type, label: "Label" },
       { type: "auth_form", icon: UserPlus, label: "Sign Up / Login" },
@@ -175,6 +188,11 @@ const SIDEBAR_CATEGORIES = [
       { type: "tooltip_text", icon: Type, label: "Tooltip" },
       { type: "dropdown_menu", icon: ChevronDown, label: "Dropdown" },
       { type: "range_slider", icon: Minus, label: "Slider" },
+      { type: "bento_grid", icon: LayoutGrid, label: "Bento Grid" },
+      { type: "trend_stat", icon: TrendingUp, label: "Trend Stat" },
+      { type: "social_share", icon: Share2, label: "Social Share" },
+      { type: "circular_progress", icon: Percent, label: "Circular Progress" },
+      { type: "dynamic_tabs", icon: Layers, label: "Dynamic Tabs" },
     ] as { type: ElementType; icon: any; label: string }[],
   },
 ];
@@ -263,6 +281,554 @@ export default function BuilderPage() {
     };
   } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  const applyWhatsAppTemplate = async () => {
+    if (!user) {
+      alert("يرجى تسجيل الدخول أولاً لتطبيق القالب.");
+      return;
+    }
+    const confirmApply = confirm("هل أنت متأكد من رغبتك في تطبيق قالب واتساب المتكامل؟ سيؤدي ذلك إلى إنشاء جداول بيانات جهات الاتصال والرسائل تلقائياً وإنشاء 3 صفحات متصلة بالكامل.");
+    if (!confirmApply) return;
+
+    try {
+      // 1. Fetch user's tables
+      const { data: userTables, error: tablesError } = await supabase
+        .from("tables")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (tablesError) throw tablesError;
+
+      let contactTable = userTables?.find(t => t.name === "جهات اتصال واتساب");
+      let messageTable = userTables?.find(t => t.name === "رسائل واتساب Web");
+
+      // 2. Create WhatsApp Contacts Table if it doesn't exist
+      if (!contactTable) {
+        const { data: newT, error: errT } = await supabase
+          .from("tables")
+          .insert({
+            user_id: user.id,
+            name: "جهات اتصال واتساب",
+            fields: JSON.stringify([
+              { name: "Name", type: "text" },
+              { name: "Status", type: "text" },
+              { name: "Image", type: "text" }
+            ])
+          })
+          .select()
+          .single();
+
+        if (errT) throw errT;
+        contactTable = newT;
+
+        // Insert initial contact records
+        await supabase.from("records").insert([
+          {
+            table_id: contactTable.id,
+            user_id: user.id,
+            data: JSON.stringify({ Name: "أحمد (مصر)", Status: "متاح للكلام ومتحمس جداً!", Image: "https://picsum.photos/seed/ahmad/80/80" })
+          },
+          {
+            table_id: contactTable.id,
+            user_id: user.id,
+            data: JSON.stringify({ Name: "سارة (السعودية)", Status: "في العمل 💼 | الرجاء كتابة رسالة", Image: "https://picsum.photos/seed/sara/80/80" })
+          },
+          {
+            table_id: contactTable.id,
+            user_id: user.id,
+            data: JSON.stringify({ Name: "خالد (الكويت)", Status: "مشغول حالياً 🚫 سأتحدث لاحقاً", Image: "https://picsum.photos/seed/khaled/80/80" })
+          },
+          {
+            table_id: contactTable.id,
+            user_id: user.id,
+            data: JSON.stringify({ Name: "فريق الدعم الفني", Status: "كيف يمكنني مساعدتك اليوم؟ 🟢", Image: "https://picsum.photos/seed/support/80/80" })
+          }
+        ]);
+      }
+
+      // 3. Create WhatsApp Messages Table if it doesn't exist
+      if (!messageTable) {
+        const { data: newM, error: errM } = await supabase
+          .from("tables")
+          .insert({
+            user_id: user.id,
+            name: "رسائل واتساب Web",
+            fields: JSON.stringify([
+              { name: "Sender", type: "text" },
+              { name: "Message", type: "text" },
+              { name: "isMe", type: "text" }
+            ])
+          })
+          .select()
+          .single();
+
+        if (errM) throw errM;
+        messageTable = newM;
+
+        // Insert initial message records
+        await supabase.from("records").insert([
+          {
+            table_id: messageTable.id,
+            user_id: user.id,
+            data: JSON.stringify({ Sender: "أحمد (مصر)", Message: "أهلاً بك! لقد تم تصميم هذا القالب بمكون تمرير وتكامل تام لقاعدة البيانات.", isMe: "false" })
+          },
+          {
+            table_id: messageTable.id,
+            user_id: user.id,
+            data: JSON.stringify({ Sender: "أنت", Message: "هذا رائع جداً! يمكننا تبادل ومزامنة الرسائل في الوقت الفعلي.", isMe: "true" })
+          },
+          {
+            table_id: messageTable.id,
+            user_id: user.id,
+            data: JSON.stringify({ Sender: "أحمد (مصر)", Message: "صحيح، جرب إرسال رسالة بنفسك عبر مدخل النصوص بالأسفل!", isMe: "false" })
+          }
+        ]);
+      }
+
+      const contactId = contactTable.id;
+      const messageId = messageTable.id;
+
+      // 4. Define 3 Connected Pages
+      const waPages: any[] = [
+        // Page 1: Home (Chats List)
+        {
+          id: "home",
+          name: "الدردشات (Chats List)",
+          path: "/",
+          elements: [
+            {
+              id: "bg_1",
+              type: "divider",
+              content: null,
+              style: {
+                width: "100%",
+                height: "100%",
+                backgroundColor: "#f0f2f5",
+                position: "absolute",
+                top: "0",
+                left: "0",
+                zIndex: -1,
+                border: "none"
+              },
+              position: { x: 0, y: 0 }
+            },
+            {
+              id: "header_panel",
+              type: "section_block",
+              content: "واتساب ويب المطور",
+              style: {
+                width: "100%",
+                height: "70px",
+                backgroundColor: "#008069",
+                color: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "0px 20px",
+                borderRadius: "0px"
+              },
+              position: { x: 0, y: 0 }
+            },
+            {
+              id: "title_text",
+              type: "heading",
+              content: "💬 واتساب ويب (الدردشات)",
+              style: {
+                color: "#ffffff",
+                fontSize: "18px",
+                fontWeight: "bold"
+              },
+              position: { x: 20, y: 22 }
+            },
+            {
+              id: "nav_to_contacts",
+              type: "button",
+              content: "👤 إضافة جهة اتصال جديدة",
+              style: {
+                backgroundColor: "#00a884",
+                color: "#ffffff",
+                padding: "8px 14px",
+                borderRadius: "20px",
+                fontSize: "12px",
+                fontWeight: "bold",
+                border: "none",
+                cursor: "pointer"
+              },
+              events: [
+                {
+                  trigger: "onClick",
+                  actions: [
+                    {
+                      id: "act_1",
+                      type: "navigate_page",
+                      params: { url: "/contacts" }
+                    }
+                  ]
+                }
+              ],
+              position: { x: 200, y: 15 }
+            },
+            {
+              id: "label_stories",
+              type: "label",
+              content: "🟢 الحالات النشطة (قوالب التمرير Scroller):",
+              style: {
+                fontSize: "13px",
+                color: "#008069",
+                fontWeight: "bold",
+                margin: "12px 16px 4px 16px"
+              },
+              position: { x: 16, y: 85 }
+            },
+            {
+              id: "stories_scroller",
+              type: "horizontal_list",
+              dataSource: { tableId: contactId },
+              dataMapping: { titleField: "Name", imageField: "Image" },
+              style: {
+                width: "100%",
+                backgroundColor: "#ffffff",
+                padding: "12px",
+                borderBottom: "1px solid #e1e9f0",
+                gap: "12px"
+              },
+              events: [
+                {
+                  trigger: "onClick",
+                  actions: [
+                    {
+                      id: "act_2",
+                      type: "navigate_page",
+                      params: { url: "/chat" }
+                    }
+                  ]
+                }
+              ],
+              position: { x: 0, y: 110 }
+            },
+            {
+              id: "label_chats",
+              type: "label",
+              content: "💬 المحادثات الأخيرة (المزامنة لقاعدة البيانات):",
+              style: {
+                fontSize: "13px",
+                color: "#667781",
+                fontWeight: "bold",
+                margin: "16px 16px 4px 16px"
+              },
+              position: { x: 16, y: 223 }
+            },
+            {
+              id: "chats_list_db",
+              type: "custom_list",
+              dataSource: { tableId: contactId },
+              dataMapping: { titleField: "Name", descriptionField: "Status", imageField: "Image" },
+              style: {
+                width: "100%",
+                padding: "16px",
+                borderRadius: "12px"
+              },
+              events: [
+                {
+                  trigger: "onClick",
+                  actions: [
+                    {
+                      id: "act_3",
+                      type: "navigate_page",
+                      params: { url: "/chat" }
+                    }
+                  ]
+                }
+              ],
+              position: { x: 0, y: 248 }
+            }
+          ]
+        },
+        // Page 2: Chat Room (/chat)
+        {
+          id: "chat_room",
+          name: "غرفة الدردشة (Chat Room)",
+          path: "/chat",
+          elements: [
+            {
+              id: "bg_2",
+              type: "divider",
+              content: null,
+              style: {
+                width: "100%",
+                height: "100%",
+                backgroundColor: "#efeae2",
+                position: "absolute",
+                top: "0",
+                left: "0",
+                zIndex: -1,
+                border: "none"
+              },
+              position: { x: 0, y: 0 }
+            },
+            {
+              id: "chat_header_panel",
+              type: "section_block",
+              content: "محادثة واتساب مخصصة",
+              style: {
+                width: "100%",
+                height: "70px",
+                backgroundColor: "#008069",
+                color: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "0px 16px",
+                borderRadius: "0px"
+              },
+              position: { x: 0, y: 0 }
+            },
+            {
+              id: "back_btn",
+              type: "button",
+              content: "◀ الدردشات",
+              style: {
+                backgroundColor: "transparent",
+                color: "#ffffff",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: "bold",
+                border: "1px solid rgba(255,255,255,0.3)",
+                cursor: "pointer"
+              },
+              events: [
+                {
+                  trigger: "onClick",
+                  actions: [
+                    {
+                      id: "act_4",
+                      type: "navigate_page",
+                      params: { url: "/" }
+                    }
+                  ]
+                }
+              ],
+              position: { x: 16, y: 18 }
+            },
+            {
+              id: "chat_partner_name",
+              type: "heading",
+              content: "👤 محادثة مع: {{active_chat_name}}",
+              style: {
+                color: "#ffffff",
+                fontSize: "16px",
+                fontWeight: "bold",
+                textAlign: "right"
+              },
+              position: { x: 120, y: 15 }
+            },
+            {
+              id: "chat_partner_status",
+              type: "label",
+              content: "متصل الآن بالخادم الذكي ⚡",
+              style: {
+                color: "#d9fdd3",
+                fontSize: "10px",
+                textAlign: "right"
+              },
+              position: { x: 120, y: 40 }
+            },
+            {
+              id: "bubble_renderer_db",
+              type: "chat_bubble",
+              dataSource: { tableId: messageId },
+              content: [],
+              style: {
+                width: "100%",
+                maxHeight: "380px",
+                overflowY: "auto",
+                backgroundColor: "transparent",
+                gap: "8px"
+              },
+              position: { x: 0, y: 80 }
+            },
+            {
+              id: "quick_message_form_db",
+              type: "form",
+              dataSource: { tableId: messageId },
+              content: {
+                title: "إرسال رسالة رد قاعدة البيانات:",
+                buttonText: "إرسال ورقة الدردشة 🚀",
+                fields: [
+                  { name: "Sender", type: "hidden", value: "أنا" },
+                  { name: "Message", type: "text", placeholder: "اكتب رسالتك للمزامنة..." },
+                  { name: "isMe", type: "hidden", value: "true" }
+                ]
+              },
+              style: {
+                width: "100%",
+                padding: "16px",
+                backgroundColor: "#f0f2f5",
+                borderRadius: "12px",
+                border: "1px solid #e1e9f0",
+                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)"
+              },
+              events: [
+                {
+                  trigger: "onSubmit",
+                  actions: [
+                    {
+                      id: "act_refresh",
+                      type: "navigate_page",
+                      params: { url: "/chat" }
+                    }
+                  ]
+                }
+              ],
+              position: { x: 0, y: 470 }
+            }
+          ]
+        },
+        // Page 3: Contacts (/contacts)
+        {
+          id: "add_contacts",
+          name: "إضافة جهات اتصال (Contacts Setup)",
+          path: "/contacts",
+          elements: [
+            {
+              id: "bg_3",
+              type: "divider",
+              content: null,
+              style: {
+                width: "100%",
+                height: "100%",
+                backgroundColor: "#f8fafc",
+                position: "absolute",
+                top: "0",
+                left: "0",
+                zIndex: -1,
+                border: "none"
+              },
+              position: { x: 0, y: 0 }
+            },
+            {
+              id: "contacts_header_panel",
+              type: "section_block",
+              content: "contacts layout",
+              style: {
+                width: "100%",
+                height: "70px",
+                backgroundColor: "#008069",
+                color: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "0px 16px",
+                borderRadius: "0px"
+              },
+              position: { x: 0, y: 0 }
+            },
+            {
+              id: "back_btn_contacts",
+              type: "button",
+              content: "◀ إلغاء والعودة",
+              style: {
+                backgroundColor: "transparent",
+                color: "#ffffff",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                fontSize: "13px",
+                fontWeight: "bold",
+                border: "1px solid rgba(255,255,255,0.3)",
+                cursor: "pointer"
+              },
+              events: [
+                {
+                  trigger: "onClick",
+                  actions: [
+                    {
+                      id: "act_5",
+                      type: "navigate_page",
+                      params: { url: "/" }
+                    }
+                  ]
+                }
+              ],
+              position: { x: 16, y: 18 }
+            },
+            {
+              id: "contacts_title",
+              type: "heading",
+              content: "👤 أضف جهة اتصال لقاعدة البيانات",
+              style: {
+                color: "#ffffff",
+                fontSize: "16px",
+                fontWeight: "bold"
+              },
+              position: { x: 150, y: 22 }
+            },
+            {
+              id: "contacts_form_db",
+              type: "form",
+              dataSource: { tableId: contactId },
+              content: {
+                title: "املأ بيانات الصديق الجديد ليتم حفظه ومزامنته فوراً:",
+                buttonText: "إضافة جهة الاتصال 👤",
+                fields: [
+                  { name: "Name", type: "text", placeholder: "اسم جهة الاتصال (مثال: أمجد الحوسني)" },
+                  { name: "Status", type: "text", placeholder: "الحالة (مثال: متواجد الآن 🟢)" },
+                  { name: "Image", type: "text", placeholder: "رابط الصورة الشخصية (مثال: https://picsum.photos/seed/amjad/80/80)" }
+                ]
+              },
+              style: {
+                width: "90%",
+                maxWidth: "450px",
+                alignSelf: "center",
+                padding: "24px",
+                backgroundColor: "#ffffff",
+                borderRadius: "16px",
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 10px 15px -3px rgba(0,0,0,0.05)"
+              },
+              events: [
+                {
+                  trigger: "onSubmit",
+                  actions: [
+                    {
+                      id: "act_6",
+                      type: "navigate_page",
+                      params: { url: "/" }
+                    }
+                  ]
+                }
+              ],
+              position: { x: 20, y: 100 }
+            }
+          ]
+        }
+      ];
+
+      setSitePages(waPages);
+      setCurrentPageId("home");
+      setElements(waPages[0].elements || []);
+
+      setTimeout(async () => {
+        const state = useBuilderStore.getState();
+        await supabase
+          .from("pages")
+          .update({
+            content: { 
+              sitePages: waPages, 
+              variables: state.variables,
+              customDomain: customDomain || null
+            },
+          })
+          .eq("id", id);
+          
+        alert("🎉 تم إعداد قاعدة البيانات جهات الاتصال والرسائل في Supabase ومزامنتها بنجاح مع 3 صفحات تفاعلية! يمكنك التحقق منها بالمعاينة الآن.");
+      }, 500);
+
+    } catch (e: any) {
+      console.error(e);
+      alert("حدث خطأ أثناء الاتصال بقاعدة البيانات: " + e.message);
+    }
+  };
 
   useEffect(() => {
     if (!loading && !user) {
@@ -635,7 +1201,7 @@ export default function BuilderPage() {
               />
             </div>
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Name / Key</label>
+              <label className="text-xs text-gray-500 block mb-1">Name / Key (اسم / مفتاح الإدخال)</label>
               <input
                 type="text"
                 value={(selectedElement.content as any)?.name || ""}
@@ -643,6 +1209,18 @@ export default function BuilderPage() {
                   content: { ...(selectedElement.content as any), name: e.target.value }
                 })}
                 placeholder="e.g. seat_number"
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Form Group Key (رمز مجموعة نموذج لتجميع القيم)</label>
+              <input
+                type="text"
+                value={(selectedElement.content as any)?.groupId || ""}
+                onChange={(e) => updateElement(selectedElement.id, {
+                  content: { ...(selectedElement.content as any), groupId: e.target.value }
+                })}
+                placeholder="e.g. login_form"
                 className="w-full px-3 py-2 border rounded-md text-sm"
               />
             </div>
@@ -661,37 +1239,108 @@ export default function BuilderPage() {
           </div>
         );
 
-      case "form":
+      case "button":
         return (
-          <div className="space-y-2">
-            <input
-              type="text"
-              value={(selectedElement.content as any).title}
-              onChange={(e) =>
-                updateElement(selectedElement.id, {
-                  content: {
-                    ...(selectedElement.content as any),
-                    title: e.target.value,
-                  },
-                })
-              }
-              placeholder="Form Title"
-              className="w-full px-3 py-2 border rounded-md text-sm"
-            />
-            <input
-              type="text"
-              value={(selectedElement.content as any).buttonText}
-              onChange={(e) =>
-                updateElement(selectedElement.id, {
-                  content: {
-                    ...(selectedElement.content as any),
-                    buttonText: e.target.value,
-                  },
-                })
-              }
-              placeholder="Button Text"
-              className="w-full px-3 py-2 border rounded-md text-sm"
-            />
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Button Text</label>
+              <input
+                type="text"
+                value={
+                  typeof selectedElement.content === "object"
+                    ? selectedElement.content?.text || ""
+                    : selectedElement.content || ""
+                }
+                onChange={(e) => {
+                  const currentContent = typeof selectedElement.content === "object" ? selectedElement.content : {};
+                  updateElement(selectedElement.id, {
+                    content: { ...currentContent, text: e.target.value },
+                  });
+                }}
+                placeholder="Button Text"
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-blue-600 block mb-1 font-semibold">🔗 Group Inputs (تجميع مدخلات المجموعة)</label>
+              <div className="bg-blue-50 border border-blue-100 p-2.5 rounded-md mb-2 text-xs text-blue-800 leading-normal">
+                عند تحديد «رمز مجموعة النموذج» للزر ولمجموعة من مدخلات النصوص، سيقوم الزر تلقائياً بقراءة قيم كافة المدخلات وحفظها في متغيرات عامة باسم كل مدخل بالإضافة إلى المتغير العام المجمع عند النقر!
+              </div>
+              <label className="text-xs text-gray-500 block mb-1">Form Group Key to Collect (رمز مجموعة تجميع القيم)</label>
+              <input
+                type="text"
+                value={(selectedElement.content as any)?.groupId || ""}
+                onChange={(e) => {
+                  const currentContent = typeof selectedElement.content === "object" ? selectedElement.content : { text: selectedElement.content || "" };
+                  updateElement(selectedElement.id, {
+                    content: { ...currentContent, groupId: e.target.value },
+                  });
+                }}
+                placeholder="e.g. login_form"
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Save Combined Data to Variable (اسم متغير حفظ المجموع الكلي للقيم كـ Object)</label>
+              <input
+                type="text"
+                value={(selectedElement.content as any)?.saveToVariable || ""}
+                onChange={(e) => {
+                  const currentContent = typeof selectedElement.content === "object" ? selectedElement.content : { text: selectedElement.content || "" };
+                  updateElement(selectedElement.id, {
+                    content: { ...currentContent, saveToVariable: e.target.value },
+                  });
+                }}
+                placeholder="e.g. form_values"
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+          </div>
+        );
+
+      case "form":
+      case "blank_form":
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Form Title</label>
+              <input
+                type="text"
+                value={(selectedElement.content as any).title}
+                onChange={(e) =>
+                  updateElement(selectedElement.id, {
+                    content: {
+                      ...(selectedElement.content as any),
+                      title: e.target.value,
+                    },
+                  })
+                }
+                placeholder="Form Title"
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Button Text</label>
+              <input
+                type="text"
+                value={(selectedElement.content as any).buttonText}
+                onChange={(e) =>
+                  updateElement(selectedElement.id, {
+                    content: {
+                      ...(selectedElement.content as any),
+                      buttonText: e.target.value,
+                    },
+                  })
+                }
+                placeholder="Button Text"
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+            {selectedElement.type === "blank_form" && (
+              <div className="text-xs text-amber-600 bg-amber-50 border border-amber-200 p-2.5 rounded-md">
+                <b>💡 Blank Form (Container)</b>: This is a container for holding form elements. Put form fields inside the card/block style or use global page layout variables to build custom form submissions!
+              </div>
+            )}
           </div>
         );
 
@@ -1442,13 +2091,9 @@ export default function BuilderPage() {
               className="w-full px-3 py-2 border rounded-md text-sm"
               placeholder={`${selectedElement.type === "image" ? "Image" : "Video"} URL`}
             />
-            {selectedElement.type === "image" &&
-              userSettings?.settings?.cloudinaryCloudName &&
-              userSettings?.settings?.cloudinaryUploadPreset && (
+            {selectedElement.type === "image" && (
                 <div className="pt-2">
-                  <CloudinaryUploadWidget
-                    cloudName={userSettings.settings.cloudinaryCloudName}
-                    uploadPreset={userSettings.settings.cloudinaryUploadPreset}
+                  <SupabaseUploadWidget
                     onSuccess={(url) =>
                       updateElement(selectedElement.id, { content: url })
                     }
@@ -1456,6 +2101,53 @@ export default function BuilderPage() {
                   />
                 </div>
               )}
+          </div>
+        );
+      case "file_upload":
+        return (
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs text-gray-500 font-medium block mb-1">تسمية المكون (Label Text)</label>
+              <input
+                type="text"
+                value={(selectedElement.content as any)?.label || "Upload Document"}
+                onChange={(e) =>
+                  updateElement(selectedElement.id, {
+                    content: {
+                      ...((selectedElement.content as any) || {}),
+                      label: e.target.value,
+                    },
+                  })
+                }
+                placeholder="Upload Document / تحميل ملف"
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 font-medium block mb-1">نص زر الرفع (Button Text)</label>
+              <input
+                type="text"
+                value={(selectedElement.content as any)?.buttonText || "Choose File"}
+                onChange={(e) =>
+                  updateElement(selectedElement.id, {
+                    content: {
+                      ...((selectedElement.content as any) || {}),
+                      buttonText: e.target.value,
+                    },
+                  })
+                }
+                placeholder="Choose File / اختيار الملف"
+                className="w-full px-3 py-2 border rounded-md text-sm"
+              />
+            </div>
+            
+            <div className="text-xs text-blue-600 bg-blue-50 border border-blue-200 p-2.5 rounded-md text-left">
+              <b>📁 عنصر تحميل الملفات والاتصال بقاعدة البيانات</b>:
+              <ul className="list-disc pl-4 mt-1 space-y-1">
+                <li>قم بتمكين {'"Database Connection"'} بالأسفل ليرتبط بجدول قاعدة بيانات.</li>
+                <li>عندما يقوم الزوار بزيارة موقعك ورفع ملف، سيتم تخزين الملف في Supabase Storage وحفظ رابطه في العمود المختار من الجدول!</li>
+              </ul>
+            </div>
           </div>
         );
 
@@ -1541,6 +2233,12 @@ export default function BuilderPage() {
         </div>
 
         <div className="flex items-center space-x-2 shrink-0">
+          <button
+            onClick={applyWhatsAppTemplate}
+            className="bg-emerald-600 text-white px-3 py-2 rounded-md flex items-center text-sm font-medium hover:bg-emerald-700 transition"
+          >
+            <Smartphone className="w-4 h-4 mr-1.5" /> قالب واتساب (WhatsApp Template)
+          </button>
           <a
             href={getPublicUrl()}
             target="_blank"
@@ -1672,7 +2370,7 @@ export default function BuilderPage() {
                             <button
                               key={item.type}
                               onClick={() => handleAddElement(item.type)}
-                              className="flex flex-col items-center justify-center p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-200 transition bg-gray-50"
+                              className="flex flex-col items-center justify-center p-3 rounded-lg hover:bg-blue-50 transition bg-gray-100/60 text-gray-700"
                             >
                               <item.icon className="w-6 h-6 text-gray-600 mb-2" />
                               <span className="text-xs text-gray-700">
@@ -1763,12 +2461,12 @@ export default function BuilderPage() {
 
             {/* Canvas */}
             <main
-              className={`${mobileView === "canvas" ? "flex" : "hidden"} md:flex flex-1 relative overflow-auto bg-gray-200 p-4 md:p-8`}
+              className={`${mobileView === "canvas" ? "flex" : "hidden"} md:flex flex-1 relative overflow-auto bg-white`}
               onClick={() => selectElement(null)}
             >
               <div
                 ref={canvasRef}
-                className="w-full h-full min-h-screen bg-white shadow-sm relative overflow-hidden"
+                className="w-full h-full min-h-screen bg-white relative overflow-hidden"
               >
                 <BuilderCanvasMap
                   canvasRef={canvasRef}
@@ -1987,78 +2685,322 @@ export default function BuilderPage() {
 
                   {/* Database Connection */}
                   {(selectedElement.type === "list" ||
+                    selectedElement.type === "simple_list" ||
+                    selectedElement.type === "card_list" ||
+                    selectedElement.type === "image_list" ||
+                    selectedElement.type === "masonry_list" ||
+                    selectedElement.type === "horizontal_list" ||
+                    selectedElement.type === "custom_list" ||
                     selectedElement.type === "form" ||
                     selectedElement.type === "text" ||
                     selectedElement.type === "image" ||
+                    selectedElement.type === "button" ||
                     selectedElement.type === "exam_result_lookup" ||
                     selectedElement.type === "search" ||
+                    selectedElement.type === "file_upload" ||
                     selectedElement.type === "label") && (
                     <div className="space-y-4 mt-4 border-t pt-4">
                       <h3 className="text-sm font-medium text-gray-900">
                         Database Connection
                       </h3>
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">
-                          Connect to Collection
+                        <label className="block text-xs font-semibold text-gray-700 mb-2">
+                          🔗 Connect to Multiple Collections / Databases (الاتصال بقواعد بيانات متعددة)
                         </label>
-                        <select
-                          value={selectedElement.dataSource?.tableId || ""}
-                          onChange={(e) =>
-                            updateElement(selectedElement.id, {
-                              dataSource: { tableId: e.target.value },
-                            })
-                          }
-                          className="w-full px-3 py-2 border rounded-md text-sm"
-                        >
-                          <option value="">-- Select a Collection --</option>
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto p-2 border rounded-md bg-gray-50">
+                          {/* Option for Files */}
+                          <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer hover:bg-white p-1 rounded transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={
+                                selectedElement.dataSource?.tableId === "files" ||
+                                (selectedElement.dataSources || []).some((ds: any) => ds.tableId === "files")
+                              }
+                              onChange={(e) => {
+                                const isChecked = e.target.checked;
+                                if (isChecked) {
+                                  if (!selectedElement.dataSource?.tableId) {
+                                    updateElement(selectedElement.id, {
+                                      dataSource: { tableId: "files" }
+                                    });
+                                  } else {
+                                    const currentDS = selectedElement.dataSources || [];
+                                    if (!currentDS.some((ds: any) => ds.tableId === "files")) {
+                                      updateElement(selectedElement.id, {
+                                        dataSources: [...currentDS, { tableId: "files" }]
+                                      });
+                                    }
+                                  }
+                                } else {
+                                  if (selectedElement.dataSource?.tableId === "files") {
+                                    const nextDS = selectedElement.dataSources || [];
+                                    if (nextDS.length > 0) {
+                                      const [first, ...rest] = nextDS;
+                                      updateElement(selectedElement.id, {
+                                        dataSource: { tableId: first.tableId },
+                                        dataSources: rest
+                                      });
+                                    } else {
+                                      updateElement(selectedElement.id, {
+                                        dataSource: { tableId: "" }
+                                      });
+                                    }
+                                  } else {
+                                    updateElement(selectedElement.id, {
+                                      dataSources: (selectedElement.dataSources || []).filter(
+                                        (ds: any) => ds.tableId !== "files"
+                                      )
+                                    });
+                                  }
+                                }
+                              }}
+                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                            />
+                            <span>files (Media Storage Uploads)</span>
+                          </label>
+
                           {userTables.map((t) => (
-                            <option key={t.id} value={t.id}>
-                              {t.name}
-                            </option>
+                            <label key={t.id} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer hover:bg-white p-1 rounded transition-colors">
+                              <input
+                                type="checkbox"
+                                checked={
+                                  selectedElement.dataSource?.tableId === t.id ||
+                                  (selectedElement.dataSources || []).some((ds: any) => ds.tableId === t.id)
+                                }
+                                onChange={(e) => {
+                                  const isChecked = e.target.checked;
+                                  if (isChecked) {
+                                    if (!selectedElement.dataSource?.tableId) {
+                                      updateElement(selectedElement.id, {
+                                        dataSource: { tableId: t.id }
+                                      });
+                                    } else {
+                                      const currentDS = selectedElement.dataSources || [];
+                                      if (!currentDS.some((ds: any) => ds.tableId === t.id)) {
+                                        updateElement(selectedElement.id, {
+                                          dataSources: [...currentDS, { tableId: t.id }]
+                                        });
+                                      }
+                                    }
+                                  } else {
+                                    if (selectedElement.dataSource?.tableId === t.id) {
+                                      const nextDS = selectedElement.dataSources || [];
+                                      if (nextDS.length > 0) {
+                                        const [first, ...rest] = nextDS;
+                                        updateElement(selectedElement.id, {
+                                          dataSource: { tableId: first.tableId },
+                                          dataSources: rest
+                                        });
+                                      } else {
+                                        updateElement(selectedElement.id, {
+                                          dataSource: { tableId: "" }
+                                        });
+                                      }
+                                    } else {
+                                      updateElement(selectedElement.id, {
+                                        dataSources: (selectedElement.dataSources || []).filter(
+                                          (ds: any) => ds.tableId !== t.id
+                                        )
+                                      });
+                                    }
+                                  }
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                              />
+                              <span>{t.name} ({t.id})</span>
+                            </label>
                           ))}
-                        </select>
+                        </div>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          يمكنك اختيار أكثر من قاعدة بيانات/مجموعة في نفس الوقت. سيقوم المكون بدمج البيانات من كافة المصادر المحددة وعرضها كقائمة واحدة متكاملة!
+                        </p>
                       </div>
                       {selectedElement.dataSource?.tableId &&
                         (selectedElement.type === "text" || 
                          selectedElement.type === "label" || 
-                         selectedElement.type === "image") && (
+                         selectedElement.type === "image" ||
+                         selectedElement.type === "button") && (
                           <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded-md border border-blue-100 mt-2">
-                            Bind single record. Example: Use <b>{"{{CurrentItem.field_name}}"}</b> in content to render the value.
+                            Bind single record. Example: Use <b>{"{{CurrentItem.field_name}}"}</b> in content/text/URL to render dynamically.
                             <div className="mt-2">
                               <p className="font-semibold mb-1">Available Properties (click to copy):</p>
                               <div className="flex flex-wrap gap-1">
-                                {userTables
-                                  .find((t) => t.id === selectedElement.dataSource?.tableId)
-                                  ?.fields?.map((field: any) => (
+                                {selectedElement.dataSource?.tableId === "files" ? (
+                                  <>
                                     <button
-                                      key={field.name}
-                                      onClick={() => navigator.clipboard.writeText(`{{CurrentItem.${field.name}}}`)}
+                                      type="button"
+                                      onClick={() => navigator.clipboard.writeText(`{{CurrentItem.name}}`)}
                                       className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px] hover:bg-gray-200"
                                     >
-                                      {field.name}
+                                      name
                                     </button>
-                                  ))}
+                                    <button
+                                      type="button"
+                                      onClick={() => navigator.clipboard.writeText(`{{CurrentItem.url}}`)}
+                                      className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px] hover:bg-gray-200"
+                                    >
+                                      url
+                                    </button>
+                                  </>
+                                ) : (
+                                  userTables
+                                    .find((t) => t.id === selectedElement.dataSource?.tableId)
+                                    ?.fields?.map((field: any) => (
+                                      <button
+                                        key={field.name}
+                                        type="button"
+                                        onClick={() => navigator.clipboard.writeText(`{{CurrentItem.${field.name}}}`)}
+                                        className="px-1.5 py-0.5 bg-gray-100 border border-gray-300 rounded text-[10px] hover:bg-gray-200"
+                                      >
+                                        {field.name}
+                                      </button>
+                                    ))
+                                )}
                               </div>
                             </div>
                           </div>
                       )}
                       {selectedElement.dataSource?.tableId &&
-                        selectedElement.type === "list" && (
-                          <div className="text-xs text-green-600 bg-green-50 p-2 rounded-md border border-green-100">
-                            Connected to{" "}
-                            <b>
-                              {
-                                userTables.find(
-                                  (t) =>
-                                    t.id ===
-                                    selectedElement.dataSource?.tableId,
-                                )?.name
-                              }
-                            </b>
-                            . In preview, this list will display dynamic
-                            results.
-                          </div>
-                        )}
+                         (selectedElement.type === "list" ||
+                          selectedElement.type === "simple_list" ||
+                          selectedElement.type === "card_list" ||
+                          selectedElement.type === "image_list" ||
+                          selectedElement.type === "masonry_list" ||
+                          selectedElement.type === "horizontal_list" ||
+                          selectedElement.type === "custom_list") && (
+                           <div className="space-y-3 mt-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100 text-left">
+                             <div className="text-xs text-blue-700 font-semibold mb-1">
+                               📂 ربط الحقول وعرض البيانات المخصصة (Fields Mapping)
+                             </div>
+                             
+                             {/* Title Field mapping */}
+                             <div>
+                               <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                                 📌 حقل العنوان (Title/Header representation)
+                               </label>
+                               <select
+                                 value={selectedElement.dataMapping?.titleField || ""}
+                                 onChange={(e) => {
+                                   const currentMapping = selectedElement.dataMapping || {};
+                                   updateElement(selectedElement.id, {
+                                     dataMapping: { ...currentMapping, titleField: e.target.value }
+                                   });
+                                 }}
+                                 className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs bg-white text-gray-800"
+                               >
+                                 <option value="">-- تلقائي (حسب اسم الحقل) --</option>
+                                 {(() => {
+                                   const tableIds = [selectedElement.dataSource.tableId];
+                                   if (Array.isArray(selectedElement.dataSources)) {
+                                     selectedElement.dataSources.forEach((ds: any) => {
+                                       if (ds?.tableId && !tableIds.includes(ds.tableId)) tableIds.push(ds.tableId);
+                                     });
+                                   }
+                                   const uniqFields: string[] = [];
+                                   tableIds.forEach((tId) => {
+                                     if (tId === "files") {
+                                       ["name", "url", "created_at"].forEach(f => { if (!uniqFields.includes(f)) uniqFields.push(f); });
+                                     } else {
+                                       const table = userTables.find(t => t.id === tId);
+                                       if (table && Array.isArray(table.fields)) {
+                                         table.fields.forEach(f => { if (!uniqFields.includes(f.name)) uniqFields.push(f.name); });
+                                       }
+                                     }
+                                   });
+                                   return uniqFields.map(f => (
+                                     <option key={f} value={f}>{f}</option>
+                                   ));
+                                 })()}
+                               </select>
+                             </div>
+
+                             {/* Description Field mapping */}
+                             <div>
+                               <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                                 📝 حقل الوصف والشرائح (Description / Details representation)
+                               </label>
+                               <select
+                                 value={selectedElement.dataMapping?.descriptionField || ""}
+                                 onChange={(e) => {
+                                   const currentMapping = selectedElement.dataMapping || {};
+                                   updateElement(selectedElement.id, {
+                                     dataMapping: { ...currentMapping, descriptionField: e.target.value }
+                                   });
+                                 }}
+                                 className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs bg-white text-gray-800"
+                               >
+                                 <option value="">-- تلقائي (حسب اسم الحقل) --</option>
+                                 {(() => {
+                                   const tableIds = [selectedElement.dataSource.tableId];
+                                   if (Array.isArray(selectedElement.dataSources)) {
+                                     selectedElement.dataSources.forEach((ds: any) => {
+                                       if (ds?.tableId && !tableIds.includes(ds.tableId)) tableIds.push(ds.tableId);
+                                     });
+                                   }
+                                   const uniqFields: string[] = [];
+                                   tableIds.forEach((tId) => {
+                                     if (tId === "files") {
+                                       ["name", "url", "created_at"].forEach(f => { if (!uniqFields.includes(f)) uniqFields.push(f); });
+                                     } else {
+                                       const table = userTables.find(t => t.id === tId);
+                                       if (table && Array.isArray(table.fields)) {
+                                         table.fields.forEach(f => { if (!uniqFields.includes(f.name)) uniqFields.push(f.name); });
+                                       }
+                                     }
+                                   });
+                                   return uniqFields.map(f => (
+                                     <option key={f} value={f}>{f}</option>
+                                   ));
+                                 })()}
+                               </select>
+                             </div>
+
+                             {/* Image Field mapping */}
+                             <div>
+                               <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                                 🖼️ حقل الصورة (Image/Url property representation)
+                               </label>
+                               <select
+                                 value={selectedElement.dataMapping?.imageField || ""}
+                                 onChange={(e) => {
+                                   const currentMapping = selectedElement.dataMapping || {};
+                                   updateElement(selectedElement.id, {
+                                     dataMapping: { ...currentMapping, imageField: e.target.value }
+                                   });
+                                 }}
+                                 className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs bg-white text-gray-800"
+                               >
+                                 <option value="">-- تلقائي (أو أول رابط صور متاح) --</option>
+                                 {(() => {
+                                   const tableIds = [selectedElement.dataSource.tableId];
+                                   if (Array.isArray(selectedElement.dataSources)) {
+                                     selectedElement.dataSources.forEach((ds: any) => {
+                                       if (ds?.tableId && !tableIds.includes(ds.tableId)) tableIds.push(ds.tableId);
+                                     });
+                                   }
+                                   const uniqFields: string[] = [];
+                                   tableIds.forEach((tId) => {
+                                     if (tId === "files") {
+                                       ["url", "name"].forEach(f => { if (!uniqFields.includes(f)) uniqFields.push(f); });
+                                     } else {
+                                       const table = userTables.find(t => t.id === tId);
+                                       if (table && Array.isArray(table.fields)) {
+                                         table.fields.forEach(f => { if (!uniqFields.includes(f.name)) uniqFields.push(f.name); });
+                                       }
+                                     }
+                                   });
+                                   return uniqFields.map(f => (
+                                     <option key={f} value={f}>{f}</option>
+                                   ));
+                                 })()}
+                               </select>
+                             </div>
+
+                             <p className="text-[10px] text-gray-500 bg-white/50 p-1.5 rounded border border-gray-200 mt-1">
+                               💡 قم باختيار أي حقل من حقول قاعدة البيانات ليتم عرضه تلقائيًا كعنوان، أو وصف، أو صورة لكل عنصر من عناصر هذه القوائم المدمجة!
+                             </p>
+                           </div>
+                      )}
                       {selectedElement.dataSource?.tableId &&
                         selectedElement.type === "form" && (
                           <div className="text-xs text-green-600 bg-green-50 p-2 rounded-md border border-green-100">
@@ -2106,6 +3048,59 @@ export default function BuilderPage() {
                               }
                             </b>
                             . It will search across all text fields of this collection.
+                          </div>
+                        )}
+                      {selectedElement.dataSource?.tableId &&
+                        selectedElement.type === "file_upload" && (
+                          <div className="space-y-3 mt-3 p-3 bg-green-50/50 rounded-lg border border-green-100 text-left">
+                            <div className="text-xs text-green-700 font-semibold mb-1">
+                              📁 إعدادات حفظ الملف في قاعدة البيانات (File Upload Database Settings)
+                            </div>
+                            <div>
+                              <label className="block text-[11px] font-medium text-gray-700 mb-1">
+                                📌 الحقل المستهدف لحفظ رابط الملف (Destination Field for File URL)
+                              </label>
+                              <select
+                                value={selectedElement.dataSource?.fieldName || "url"}
+                                onChange={(e) => {
+                                  const currentDS = selectedElement.dataSource || { tableId: "" };
+                                  updateElement(selectedElement.id, {
+                                    dataSource: { ...currentDS, fieldName: e.target.value }
+                                  });
+                                }}
+                                className="w-full px-2 py-1.5 border border-gray-300 rounded text-xs bg-white text-gray-800"
+                              >
+                                {selectedElement.dataSource?.tableId === "files" ? (
+                                  <>
+                                    <option value="url">url</option>
+                                    <option value="name">name</option>
+                                  </>
+                                ) : (
+                                  userTables
+                                    .find((t) => t.id === selectedElement.dataSource?.tableId)
+                                    ?.fields?.map((field: any) => (
+                                      <option key={field.name} value={field.name}>
+                                        {field.name}
+                                      </option>
+                                    )) || <option value="url">url</option>
+                                )}
+                              </select>
+                              <p className="text-[10px] text-gray-500 mt-1">
+                                حدد حقل قاعدة البيانات (مثل image أو file_url) الذي سيتم تخزين رابط الملف المرفوع بداخله.
+                              </p>
+                            </div>
+                            <div className="text-xs text-green-600 bg-white/60 p-2 rounded border border-green-200">
+                              عند رفع أي ملف، سيتم إنشاء سجل جديد داخل جدول{" "}
+                              <b>
+                                {selectedElement.dataSource?.tableId === "files"
+                                  ? "ملفات النظام (files)"
+                                  : userTables.find(
+                                      (t) => t.id === selectedElement.dataSource?.tableId
+                                    )?.name || selectedElement.dataSource?.tableId
+                                }
+                              </b>{" "}
+                              وتخزين رابط الملف في العمود المختار في قاعدة البيانات تلقائيًا!
+                            </div>
                           </div>
                         )}
                     </div>
@@ -2305,20 +3300,75 @@ export default function BuilderPage() {
       )}
 
       {topTab === "database" && (
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-white flex flex-col items-center justify-center">
-          <TableIcon className="w-16 h-16 text-gray-300 mb-4" />
-          <h2 className="text-xl font-bold text-gray-700 mb-2">
-            Database Connection
-          </h2>
-          <p className="text-gray-500 text-center max-w-sm mb-6">
-            Manage data mapped to your Dynamic Lists and Forms.
-          </p>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md"
-          >
-            Go to Database Dashboard
-          </button>
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 flex flex-col items-center">
+          <div className="max-w-xl w-full bg-white p-6 rounded-xl shadow-sm border mt-4">
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
+                <TableIcon className="w-8 h-8" />
+              </div>
+              <div>
+                <h2 className="text-base font-bold text-gray-800">Database & Schema Sync</h2>
+                <p className="text-xs text-gray-500">View schema mapping status and test live connection properties.</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-100 flex items-start gap-3">
+                <span className="text-emerald-500 mt-0.5 text-lg">●</span>
+                <div>
+                  <h3 className="font-semibold text-emerald-800 text-sm">Supabase Connection Active</h3>
+                  <p className="text-xs text-emerald-600 mt-0.5">Your page blocks, dynamic checklists, and forms are fully linked to the live cloud database.</p>
+                </div>
+              </div>
+
+              <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
+                <h3 className="text-2xs font-bold text-gray-500 uppercase tracking-wider">Dynamic Mapped Objects</h3>
+                <ul className="text-xs space-y-2 text-gray-700">
+                  <li className="flex justify-between items-center p-2.5 bg-white rounded border">
+                    <span className="font-semibold font-mono">public.files</span>
+                    <span className="text-3xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-widest">Auto-Healed Failsafe</span>
+                  </li>
+                  <li className="flex justify-between items-center p-2.5 bg-white rounded border">
+                    <span className="font-semibold font-mono">public.pages</span>
+                    <span className="text-3xs bg-gray-100 text-gray-600 font-semibold px-2 py-0.5 rounded-full uppercase">Dynamic Content</span>
+                  </li>
+                  <li className="flex justify-between items-center p-2.5 bg-white rounded border">
+                    <span className="font-semibold font-mono">public.records</span>
+                    <span className="text-3xs bg-gray-100 text-gray-600 font-semibold px-2 py-0.5 rounded-full uppercase">Form Entries</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-4 rounded-lg bg-amber-50 border border-amber-100">
+                <h4 className="font-semibold text-amber-800 text-xs">Altered Table Columns Manually?</h4>
+                <p className="text-3xs text-amber-700 mt-1 leading-relaxed">
+                  PostgREST caches the schema cache internally. If you modified table schemas (like the missing <code>name</code> column in the <code>files</code> table), click below to validate if the tables respond correctly to your client instance.
+                </p>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const { error } = await supabase.from('files').select('id').limit(1);
+                        if (error) throw error;
+                        alert("Database connection synced! Active response verified successfully.");
+                      } catch (err: any) {
+                        alert("Sync validation error: " + err.message);
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-amber-600 text-white hover:bg-amber-700 rounded text-xs font-semibold shadow-xs transition cursor-pointer"
+                  >
+                    Sync & Test Connection
+                  </button>
+                  <button
+                    onClick={() => router.push("/dashboard")}
+                    className="px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded text-xs font-medium transition cursor-pointer"
+                  >
+                    Go to Dashboard
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -2447,7 +3497,7 @@ const BuilderElement = memo(function BuilderElement({
         x: 0,
         y: 0,
       }}
-      className={`cursor-move ${isSelected ? "ring-2 ring-blue-500 ring-offset-2" : "hover:ring-1 hover:ring-gray-300 hover:ring-offset-1"}`}
+      className={`cursor-move ${isSelected ? "outline-2 outline-blue-500 rounded" : ""}`}
     >
       <Renderer elements={[element]} isBuilderMode={true} />
     </motion.div>
