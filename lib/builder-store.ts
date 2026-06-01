@@ -2,7 +2,34 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { v4 as uuidv4 } from "uuid";
 
+const generateListTemplate = (type: ElementType, listId: string): PageElement[] => {
+  const children: PageElement[] = [];
+  
+  if (type === "social_media_list") {
+    children.push({ id: uuidv4(), parentId: listId, type: "container", position: { x: 0, y: 0 }, style: { width: "100%", padding: "16px", backgroundColor: "#fff", borderRadius: "12px", border: "1px solid #eee", gap: "12px", display: "flex", flexWrap: "wrap" }, content: null });
+    const containerId = children[0].id;
+    children.push({ id: uuidv4(), parentId: containerId, type: "avatar", position: { x: 10, y: 10 }, style: { width: "40px", height: "40px", borderRadius: "50%" }, content: null, dataMapping: { fieldName: "avatar" } });
+    children.push({ id: uuidv4(), parentId: containerId, type: "text", position: { x: 60, y: 10 }, style: { fontSize: "14px", fontWeight: "bold", color: "#111" }, content: "User Name", dataMapping: { fieldName: "author_name" } });
+    children.push({ id: uuidv4(), parentId: containerId, type: "text", position: { x: 60, y: 30 }, style: { fontSize: "11px", color: "#888" }, content: "Time", dataMapping: { fieldName: "time" } });
+    children.push({ id: uuidv4(), parentId: containerId, type: "text", position: { x: 10, y: 60 }, style: { fontSize: "14px", color: "#333", width: "100%" }, content: "Post body text...", dataMapping: { fieldName: "body" } });
+    children.push({ id: uuidv4(), parentId: containerId, type: "image", position: { x: 10, y: 100 }, style: { width: "100%", height: "200px", borderRadius: "8px" }, content: "https://picsum.photos/seed/placeholder/400/300", dataMapping: { fieldName: "image" } });
+    children.push({ id: uuidv4(), parentId: containerId, type: "button", position: { x: 10, y: 320 }, style: { backgroundColor: "transparent", color: "#6366f1", fontSize: "12px", padding: "8px" }, content: "❤️ Like" });
+    children.push({ id: uuidv4(), parentId: containerId, type: "button", position: { x: 80, y: 320 }, style: { backgroundColor: "transparent", color: "#6366f1", fontSize: "12px", padding: "8px" }, content: "💬 Comment" });
+  } else if (type === "card_list" || type === "horizontal_card_list") {
+    children.push({ id: uuidv4(), parentId: listId, type: "image", position: { x: 0, y: 0 }, style: { width: "100%", height: "150px", borderRadius: "12px 12px 0 0" }, content: "https://picsum.photos/seed/placeholder/400/300", dataMapping: { fieldName: "image" } });
+    children.push({ id: uuidv4(), parentId: listId, type: "heading", position: { x: 16, y: 166 }, style: { fontSize: "16px", fontWeight: "bold", color: "#111" }, content: "Card Title", dataMapping: { fieldName: "title" } });
+    children.push({ id: uuidv4(), parentId: listId, type: "text", position: { x: 16, y: 195 }, style: { fontSize: "12px", color: "#666" }, content: "Card Description", dataMapping: { fieldName: "description" } });
+    children.push({ id: uuidv4(), parentId: listId, type: "text", position: { x: 16, y: 220 }, style: { fontSize: "14px", color: "#111", fontWeight: "bold" }, content: "$99", dataMapping: { fieldName: "price" } });
+  } else if (type === "avatar_list" || type === "simple_list" || type === "chat_list") {
+     children.push({ id: uuidv4(), parentId: listId, type: "avatar", position: { x: 10, y: 10 }, style: { width: "40px", height: "40px", borderRadius: "50%" }, content: null, dataMapping: { fieldName: "image" } });
+     children.push({ id: uuidv4(), parentId: listId, type: "text", position: { x: 60, y: 12 }, style: { fontSize: "14px", fontWeight: "bold", color: "#111" }, content: "Name", dataMapping: { fieldName: "title" } });
+     children.push({ id: uuidv4(), parentId: listId, type: "text", position: { x: 60, y: 32 }, style: { fontSize: "11px", color: "#888" }, content: "Description", dataMapping: { fieldName: "desc" } });
+  }
+  return children;
+};
+
 export type ElementType =
+  | "container"
   | "text"
   | "heading"
   | "image"
@@ -52,6 +79,10 @@ export type ElementType =
   | "signature"
   | "auth_form"
   | "loading_screen"
+  | "rich_text"
+  | "html"
+  | "switch"
+  | "checkbox"
   | "nav_bar"
   | "simple_list"
   | "card_list"
@@ -59,6 +90,16 @@ export type ElementType =
   | "masonry_list"
   | "horizontal_list"
   | "custom_list"
+  | "avatar_list"
+  | "horizontal_card_list"
+  | "horizontal_chip_list"
+  | "social_media_list"
+  | "kanban_board"
+  | "calendar_list"
+  | "timeline_list"
+  | "carousel_list"
+  | "chat_list"
+  | "tree_list"
   | "product_card"
   | "blog_card"
   | "stats_grid"
@@ -182,6 +223,8 @@ export interface PageElement {
   dataSource?: DataSource;
   dataSources?: DataSource[];
   dataMapping?: DataMapping;
+  children?: PageElement[];
+  parentId?: string | null;  // For nested items inside a List or Container
 }
 
 export interface SitePage {
@@ -204,10 +247,12 @@ interface BuilderState {
   currentPageId: string;
   variables: AppVariable[];
   selectedElementId: string | null;
+  editingListId: string | null;
   isDragging: boolean;
   setElements: (elements: PageElement[]) => void;
   setSitePages: (pages: SitePage[]) => void;
   setCurrentPageId: (id: string) => void;
+  setEditingListId: (id: string | null) => void;
   addSitePage: (name: string, path: string) => void;
   removeSitePage: (id: string) => void;
   updateSitePage: (id: string, updates: Partial<SitePage>) => void;
@@ -220,6 +265,7 @@ interface BuilderState {
 }
 
 const defaultContent: Record<ElementType, any> = {
+  container: null,
   text: "Double click to edit text",
   heading: "Heading",
   image: "https://picsum.photos/seed/placeholder/400/300",
@@ -248,6 +294,36 @@ const defaultContent: Record<ElementType, any> = {
   custom_list: [
     { title: "Custom 1", subtitle: "Sub 1" },
     { title: "Custom 2", subtitle: "Sub 2" }
+  ],
+  avatar_list: [
+    { name: "John Doe", role: "Developer", bio: "Likes coding without code.", status: "Online" }
+  ],
+  horizontal_card_list: [
+    { title: "Article 1", category: "News", views: "100 views" }
+  ],
+  horizontal_chip_list: [
+    { title: "All" }, { title: "Popular" }
+  ],
+  social_media_list: [
+    { author_name: "John", body: "Hello World!" }
+  ],
+  kanban_board: [
+    { title: "Task 1", desc: "Do it", status: "To Do" }
+  ],
+  calendar_list: [
+    { title: "Meeting", date: "2026-06-01", time: "10:00 AM" }
+  ],
+  timeline_list: [
+    { title: "Phase 1", desc: "Initiation", date: "June" }
+  ],
+  carousel_list: [
+    { title: "Slide 1", desc: "Welcome" }
+  ],
+  chat_list: [
+    { text: "Hello!", sender: "me", time: "10:00 AM" }
+  ],
+  tree_list: [
+    { id: "root", title: "Project Folder", isFolder: true, parentId: null }
   ],
   quote: "This is an inspiring quote.",
   badge: "New",
@@ -324,6 +400,10 @@ const defaultContent: Record<ElementType, any> = {
   signature: "John Doe",
   auth_form: { title: "Sign Up", mode: "signup", buttonText: "Create Account" },
   loading_screen: { message: "Loading...", showSpinner: true },
+  rich_text: "<p>This is a <strong>rich text</strong> editor.</p>",
+  html: "<div>Custom HTML</div>",
+  switch: { label: "Toggle setting", checked: false },
+  checkbox: { label: "Check this option", checked: false },
   nav_bar: {
     links: [
       { label: "Home", url: "/" },
@@ -428,6 +508,7 @@ const defaultContent: Record<ElementType, any> = {
 };
 
 const defaultStyle: Record<ElementType, ElementStyle> = {
+  container: { width: "100%", padding: "16px", backgroundColor: "#f9fafb", borderRadius: "8px" },
   text: { fontSize: "16px", color: "#333333" },
   heading: { fontSize: "32px", color: "#111111" },
   image: { width: "400px", height: "auto", borderRadius: "8px" },
@@ -454,6 +535,16 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
   masonry_list: { width: "100%", columnCount: 2, columnGap: "10px" },
   horizontal_list: { width: "100%", display: "flex", flexDirection: "row", gap: "10px", overflowX: "auto" },
   custom_list: { width: "100%", display: "flex", flexDirection: "column", gap: "10px" },
+  avatar_list: { width: "100%", display: "flex", flexDirection: "column", gap: "10px" },
+  horizontal_card_list: { width: "100%", display: "flex", flexDirection: "row", gap: "10px" },
+  horizontal_chip_list: { width: "100%", display: "flex", flexDirection: "row", gap: "10px" },
+  social_media_list: { width: "100%" },
+  kanban_board: { width: "100%" },
+  calendar_list: { width: "100%" },
+  timeline_list: { width: "100%" },
+  carousel_list: { width: "100%" },
+  chat_list: { width: "100%" },
+  tree_list: { width: "100%" },
   quote: {
     fontSize: "18px",
     color: "#4b5563",
@@ -641,6 +732,10 @@ const defaultStyle: Record<ElementType, ElementStyle> = {
     left: "0",
     zIndex: "9999",
   },
+  rich_text: { width: "100%", fontSize: "14px", color: "#333333", lineHeight: "1.5" },
+  html: { width: "100%" },
+  switch: { display: "flex", alignItems: "center", gap: "10px" },
+  checkbox: { display: "flex", alignItems: "center", gap: "10px" },
   nav_bar: {
     width: "100%",
     display: "flex",
@@ -764,10 +859,12 @@ export const useBuilderStore = create<BuilderState>()(subscribeWithSelector((set
   currentPageId: "",
   variables: [],
   selectedElementId: null,
+  editingListId: null,
   isDragging: false,
   setElements: (elements) => set({ elements }),
   setSitePages: (sitePages) => set({ sitePages }),
   setCurrentPageId: (currentPageId) => set({ currentPageId }),
+  setEditingListId: (id) => set({ editingListId: id }),
   addSitePage: (name, path) =>
     set((state) => {
       const newId = uuidv4();
@@ -803,12 +900,12 @@ export const useBuilderStore = create<BuilderState>()(subscribeWithSelector((set
     })),
   setVariables: (variables) => set({ variables }),
   addElement: (type, position) =>
-    set((state) => ({
-      elements: [
-        ...state.elements,
-        {
-          id: uuidv4(),
+    set((state) => {
+      const newElemId = uuidv4();
+      const newElem: PageElement = {
+          id: newElemId,
           type,
+          parentId: state.editingListId,
           content: defaultContent[type],
           style: { ...defaultStyle[type] },
           position,
@@ -842,9 +939,18 @@ export const useBuilderStore = create<BuilderState>()(subscribeWithSelector((set
                   },
                 ]
               : [],
-        },
-      ],
-    })),
+        };
+        
+      const newChildren = generateListTemplate(type, newElemId);
+      
+      return {
+        elements: [
+          ...state.elements,
+          newElem,
+          ...newChildren
+        ]
+      };
+    }),
   updateElement: (id, updates) =>
     set((state) => ({
       elements: state.elements.map((el) =>
@@ -853,7 +959,7 @@ export const useBuilderStore = create<BuilderState>()(subscribeWithSelector((set
     })),
   removeElement: (id) =>
     set((state) => ({
-      elements: state.elements.filter((el) => el.id !== id),
+      elements: state.elements.filter((el) => el.id !== id && el.parentId !== id),
       selectedElementId:
         state.selectedElementId === id ? null : state.selectedElementId,
     })),

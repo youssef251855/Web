@@ -67,6 +67,10 @@ import {
   TrendingUp,
   Percent,
   Layers,
+  FileText,
+  Trash2,
+  Database,
+  Edit,
 } from "lucide-react";
 import SupabaseUploadWidget from "@/components/SupabaseUploadWidget";
 import ActionEditor from "@/components/ActionEditor";
@@ -100,12 +104,16 @@ const SIDEBAR_CATEGORIES = [
       { type: "masonry_list", icon: LayoutGrid, label: "Masonry List" },
       { type: "horizontal_list", icon: ArrowRight, label: "Horizontal List" },
       { type: "custom_list", icon: List, label: "Custom List" },
-      { type: "table", icon: TableIcon, label: "Table" },
-      { type: "badge", icon: Tag, label: "Badge" },
-      { type: "accordion", icon: ChevronDown, label: "Accordion" },
-      { type: "progress", icon: BatteryMedium, label: "Progress" },
-      { type: "stat", icon: BarChart, label: "Stat" },
-      { type: "checklist", icon: CheckSquare, label: "Checklist" },
+      { type: "avatar_list", icon: User, label: "Avatar List" },
+      { type: "horizontal_card_list", icon: LayoutGrid, label: "Horizontal Card List" },
+      { type: "horizontal_chip_list", icon: Tag, label: "Horizontal Chip List" },
+      { type: "social_media_list", icon: MessageSquare, label: "Social Feed List" },
+      { type: "kanban_board", icon: Layout, label: "Kanban Board" },
+      { type: "calendar_list", icon: Clock, label: "Calendar List" },
+      { type: "timeline_list", icon: ListOrdered, label: "Timeline List" },
+      { type: "carousel_list", icon: ImageIcon, label: "Carousel List" },
+      { type: "chat_list", icon: Send, label: "Chat List" },
+      { type: "tree_list", icon: List, label: "Tree/Folder List" },
     ] as { type: ElementType; icon: any; label: string }[],
   },
   {
@@ -143,6 +151,9 @@ const SIDEBAR_CATEGORIES = [
       { type: "blank_form", icon: FormInput, label: "Blank Form" },
       { type: "input", icon: Type, label: "Input" },
       { type: "label", icon: Type, label: "Label" },
+      { type: "switch", icon: ToggleRight, label: "Switch" },
+      { type: "checkbox", icon: CheckSquare, label: "Checkbox" },
+      { type: "checklist", icon: CheckSquare, label: "Checklist" },
       { type: "auth_form", icon: UserPlus, label: "Sign Up / Login" },
       { type: "toggle", icon: ToggleRight, label: "Toggle" },
       { type: "signature", icon: PenTool, label: "Signature" },
@@ -151,6 +162,14 @@ const SIDEBAR_CATEGORIES = [
   {
     name: "Structure & Misc",
     items: [
+      { type: "container", icon: Layout, label: "Container" },
+      { type: "video", icon: Video, label: "Video" },
+      { type: "badge", icon: Tag, label: "Badge" },
+      { type: "accordion", icon: ChevronDown, label: "Accordion" },
+      { type: "progress", icon: BatteryMedium, label: "Progress" },
+      { type: "table", icon: TableIcon, label: "Table" },
+      { type: "rich_text", icon: FileText, label: "Rich Text" },
+      { type: "html", icon: Code, label: "HTML" },
       { type: "footer", icon: PanelBottom, label: "Footer" },
       { type: "breadcrumbs", icon: ChevronRight, label: "Breadcrumbs" },
       { type: "iframe", icon: AppWindow, label: "Iframe" },
@@ -190,6 +209,7 @@ const SIDEBAR_CATEGORIES = [
       { type: "range_slider", icon: Minus, label: "Slider" },
       { type: "bento_grid", icon: LayoutGrid, label: "Bento Grid" },
       { type: "trend_stat", icon: TrendingUp, label: "Trend Stat" },
+      { type: "stat", icon: BarChart, label: "Stat" },
       { type: "social_share", icon: Share2, label: "Social Share" },
       { type: "circular_progress", icon: Percent, label: "Circular Progress" },
       { type: "dynamic_tabs", icon: Layers, label: "Dynamic Tabs" },
@@ -218,7 +238,8 @@ const BuilderCanvasMap = memo(function BuilderCanvasMap({
   canvasRef: React.RefObject<HTMLDivElement | null>;
   setMobileView: (view: "elements" | "canvas" | "properties") => void;
 }) {
-  const elementIds = useBuilderStore(useShallow((s) => s.elements.map(e => e.id)));
+  const editingListId = useBuilderStore((s) => s.editingListId);
+  const elementIds = useBuilderStore(useShallow((s) => s.elements.filter(e => e.parentId === (editingListId || null) || e.parentId === editingListId || (!editingListId && !e.parentId)).map(e => e.id)));
   return (
     <>
       {elementIds.map((id) => (
@@ -239,6 +260,7 @@ export default function BuilderPage() {
   const router = useRouter();
   
   const setElements = useBuilderStore((s) => s.setElements);
+  const editingListId = useBuilderStore((s) => s.editingListId);
   const sitePages = useBuilderStore((s) => s.sitePages);
   const setSitePages = useBuilderStore((s) => s.setSitePages);
   const currentPageId = useBuilderStore((s) => s.currentPageId);
@@ -281,6 +303,36 @@ export default function BuilderPage() {
     };
   } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  // Embedded Project Database State
+  const [dbEditSelectedTable, setDbEditSelectedTable] = useState<any | null>(null);
+  const [dbEditViewMode, setDbEditViewMode] = useState<'schema' | 'data'>('data');
+  const [dbEditRecords, setDbEditRecords] = useState<any[]>([]);
+  const [dbEditLoadingRecords, setDbEditLoadingRecords] = useState(false);
+  const [isDbEditAddingRecord, setIsDbEditAddingRecord] = useState(false);
+  const [dbEditEditingRecord, setDbEditEditingRecord] = useState<any | null>(null);
+  const [dbEditNewRecordData, setDbEditNewRecordData] = useState<any>({});
+  const [isDbEditCreatingTable, setIsDbEditCreatingTable] = useState(false);
+  const [dbEditNewTableName, setDbEditNewTableName] = useState('');
+  const [dbEditNewFieldName, setDbEditNewFieldName] = useState('');
+  const [dbEditNewFieldType, setDbEditNewFieldType] = useState<'text' | 'number' | 'date' | 'boolean' | 'relationship'>('text');
+  const [dbEditRelationRelatedTableId, setDbEditRelationRelatedTableId] = useState<string>('');
+  const [dbEditRelationRelationType, setDbEditRelationRelationType] = useState<string>('one_to_many');
+  const [dbEditRelationRelatedFieldName, setDbEditRelationRelatedFieldName] = useState<string>('');
+  const [extraProjectTableIds, setExtraProjectTableIds] = useState<string[]>([]);
+  const [allTablesRecords, setAllTablesRecords] = useState<Record<string, any[]>>({});
+  const [dataPickerTargetField, setDataPickerTargetField] = useState<string | null>(null);
+  const [dataPickerIsOpen, setDataPickerIsOpen] = useState(false);
+  const [dataPickerPathStack, setDataPickerPathStack] = useState<string[]>([]);
+
+  // Embedded User Manager State
+  const [builderSiteUsers, setBuilderSiteUsers] = useState<any[]>([]);
+  const [builderSiteUsersLoading, setBuilderSiteUsersLoading] = useState(false);
+  const [isBuilderAddingUser, setIsBuilderAddingUser] = useState(false);
+  const [builderNewUserEmail, setBuilderNewUserEmail] = useState('');
+  const [builderNewUserName, setBuilderNewUserName] = useState('');
+  const [builderNewUserPassword, setBuilderNewUserPassword] = useState('');
+  const [builderNewUserRole, setBuilderNewUserRole] = useState<'user' | 'admin'>('user');
 
   const applyWhatsAppTemplate = async () => {
     if (!user) {
@@ -940,6 +992,400 @@ export default function BuilderPage() {
     };
     fetchUserPagesAndTables();
   }, [user]);
+
+  // Project-Bound Database helper queries & mutations
+  const getProjectTableIds = () => {
+    const ids = new Set<string>();
+    const state = useBuilderStore.getState();
+    const pagesList = state.sitePages || [];
+    pagesList.forEach((page: any) => {
+      const elements = page.elements || [];
+      elements.forEach((el: any) => {
+        if (el.dataSource?.tableId) {
+          ids.add(el.dataSource.tableId);
+        }
+        if (Array.isArray(el.dataSources)) {
+          el.dataSources.forEach((ds: any) => {
+            if (ds?.tableId) ids.add(ds.tableId);
+          });
+        }
+      });
+    });
+    return Array.from(ids);
+  };
+
+  const getProjectTables = () => {
+    const boundIds = getProjectTableIds();
+    return userTables.filter(t => 
+      t.id !== 'site_users' && 
+      (boundIds.includes(t.id) || 
+       t.name === "جهات اتصال واتساب" || 
+       t.name === "رسائل واتساب Web" || 
+       extraProjectTableIds.includes(t.id))
+    );
+  };
+
+  // Automatically select the first project table once tables are loaded
+  useEffect(() => {
+    if (topTab === "database" && !dbEditSelectedTable) {
+      const prjTables = getProjectTables();
+      if (prjTables.length > 0) {
+        setDbEditSelectedTable(prjTables[0]);
+      }
+    }
+  }, [topTab, userTables]);
+
+  // Fetch table records when selectedTable or viewMode changes
+  useEffect(() => {
+    const fetchTableRecords = async () => {
+      if (topTab === "database" && dbEditSelectedTable && dbEditViewMode === 'data') {
+        setDbEditLoadingRecords(true);
+        try {
+          const { data, error } = await supabase
+            .from('records')
+            .select('*')
+            .eq('table_id', dbEditSelectedTable.id);
+            
+          if (error) throw error;
+          
+          const parsedRecords = (data || []).map(record => ({
+            id: record.id,
+            created_at: record.created_at,
+            ...(typeof record.data === 'string' ? JSON.parse(record.data) : record.data)
+          }));
+          
+          setDbEditRecords(parsedRecords);
+        } catch (error) {
+          console.error("Error fetching project records", error);
+        } finally {
+          setDbEditLoadingRecords(false);
+        }
+      }
+    };
+    
+    fetchTableRecords();
+  }, [topTab, dbEditSelectedTable, dbEditViewMode]);
+
+  // Fetch all tables' records for relation dropdown selectors
+  useEffect(() => {
+    const fetchAllTablesRecords = async () => {
+      if (topTab === "database") {
+        try {
+          const { data, error } = await supabase
+            .from('records')
+            .select('*');
+          if (error) throw error;
+          
+          const recordMap: Record<string, any[]> = {};
+          (data || []).forEach(record => {
+            const tId = record.table_id;
+            const parsed = typeof record.data === 'string' ? JSON.parse(record.data) : record.data;
+            if (!recordMap[tId]) recordMap[tId] = [];
+            recordMap[tId].push({
+              id: record.id,
+              created_at: record.created_at,
+              ...(parsed || {})
+            });
+          });
+          setAllTablesRecords(recordMap);
+        } catch (e) {
+          console.error("Error prefetching all tables records:", e);
+        }
+      }
+    };
+    fetchAllTablesRecords();
+  }, [topTab, userTables]);
+
+  // Fetch registered builder site users when users tab is active
+  useEffect(() => {
+    const fetchSiteUsers = async () => {
+      if (topTab === "users" && user) {
+        setBuilderSiteUsersLoading(true);
+        try {
+          const { data, error } = await supabase
+            .from('site_users')
+            .select('*')
+            .eq('owner_id', user.id);
+            
+          if (error) throw error;
+          setBuilderSiteUsers(data || []);
+        } catch (error) {
+          console.error("Error fetching site users within builder", error);
+        } finally {
+          setBuilderSiteUsersLoading(false);
+        }
+      }
+    };
+    fetchSiteUsers();
+  }, [topTab, user]);
+
+  // Project database handlers
+  const handleCreateProjectTable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !dbEditNewTableName.trim()) return;
+    setIsDbEditCreatingTable(true);
+    
+    const defaultFields = [
+      { id: Date.now().toString(), name: 'Name', type: 'text' }
+    ];
+
+    try {
+      const { data, error } = await supabase
+        .from('tables')
+        .insert({
+          user_id: user.id,
+          name: dbEditNewTableName,
+          fields: JSON.stringify(defaultFields),
+        })
+        .select('*')
+        .single();
+        
+      if (error) throw error;
+      
+      const newTable = { 
+        id: data.id, 
+        name: dbEditNewTableName, 
+        fields: defaultFields 
+      };
+      
+      setUserTables(prev => [...prev.filter(t => t.id !== newTable.id), newTable]);
+      setExtraProjectTableIds(prev => [...prev, data.id]);
+      setDbEditSelectedTable(newTable);
+      setDbEditNewTableName('');
+      setIsDbEditCreatingTable(false);
+      alert("🎉 تم إنشاء الجدول بنجاح في قاعدة البيانات ومزامنته مع المشروع الحالي!");
+    } catch (error: any) {
+      console.error("Error creating project table:", error);
+      alert("فشل إنشاء الجدول: " + error.message);
+    } finally {
+      setIsDbEditCreatingTable(false);
+    }
+  };
+
+  const handleDeleteProjectTable = async (tableId: string) => {
+    if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الجدول نهائياً؟ ستفقد جميع الحقول والبيانات المسجلة.')) return;
+    try {
+      const { error } = await supabase
+        .from('tables')
+        .delete()
+        .eq('id', tableId);
+        
+      if (error) throw error;
+      
+      setUserTables(prev => prev.filter(t => t.id !== tableId));
+      setExtraProjectTableIds(prev => prev.filter(id => id !== tableId));
+      setDbEditSelectedTable(null);
+      alert("تم حذف الجدول بالكامل بنجاح!");
+    } catch (error: any) {
+      console.error("Error deleting table", error);
+      alert("فشل حذف الجدول: " + error.message);
+    }
+  };
+
+  const handleUpdateProjectTableFields = async (updatedFields: any[]) => {
+    if (!dbEditSelectedTable) return;
+    
+    // Update state first optimistically
+    const updatedTable = { ...dbEditSelectedTable, fields: updatedFields };
+    setDbEditSelectedTable(updatedTable);
+    setUserTables(prev => prev.map(t => t.id === dbEditSelectedTable.id ? updatedTable : t));
+
+    try {
+      const { error } = await supabase
+        .from('tables')
+        .update({
+          fields: JSON.stringify(updatedFields),
+        })
+        .eq('id', dbEditSelectedTable.id);
+        
+      if (error) throw error;
+    } catch (error) {
+      console.error("Error updating table fields", error);
+      alert("حدث خطأ أثناء حفظ التحديث في قاعدة البيانات.");
+    }
+  };
+
+  const handleAddProjectTableField = () => {
+    if (!dbEditSelectedTable || !dbEditNewFieldName.trim()) return;
+    const isNameExists = dbEditSelectedTable.fields.some((f: any) => f.name.toLowerCase() === dbEditNewFieldName.trim().toLowerCase());
+    if (isNameExists) {
+      alert("هذا الحقل موجود بالفعل!");
+      return;
+    }
+    const newField = { 
+      id: Date.now().toString(), 
+      name: dbEditNewFieldName.trim(), 
+      type: dbEditNewFieldType,
+      ...(dbEditNewFieldType === 'relationship' && {
+        relatedTableId: dbEditRelationRelatedTableId,
+        relationType: dbEditRelationRelationType,
+        relatedFieldName: dbEditRelationRelatedFieldName
+      })
+    };
+    const updatedFields = [...dbEditSelectedTable.fields, newField];
+    handleUpdateProjectTableFields(updatedFields);
+    setDbEditNewFieldName('');
+    setDbEditRelationRelatedTableId('');
+    setDbEditRelationRelatedFieldName('');
+  };
+
+  const handleRemoveProjectTableField = (fieldId: string) => {
+    if (!dbEditSelectedTable) return;
+    if (!confirm("هل أنت متأكد من حذف هذا الحقل من الجدول؟")) return;
+    const updatedFields = dbEditSelectedTable.fields.filter((f: any) => f.id !== fieldId);
+    handleUpdateProjectTableFields(updatedFields);
+  };
+
+  const handleSelectToken = (token: string) => {
+    if (!selectedElement || !dataPickerTargetField) return;
+    
+    const isNested = dataPickerTargetField.includes(".");
+    if (isNested) {
+      const parts = dataPickerTargetField.split(".");
+      const main = parts[0];
+      const sub = parts[1];
+      const oldVal = (selectedElement as any)[main]?.[sub] || "";
+      const newVal = oldVal + ` {{ ${token} }}`;
+      updateElement(selectedElement.id, {
+        [main]: {
+          ...((selectedElement as any)[main] || {}),
+          [sub]: newVal
+        }
+      });
+    } else {
+      const oldVal = (selectedElement as any)[dataPickerTargetField] || "";
+      const newVal = typeof oldVal === "string" ? (oldVal + ` {{ ${token} }}`) : `{{ ${token} }}`;
+      updateElement(selectedElement.id, { [dataPickerTargetField]: newVal });
+    }
+    
+    setDataPickerIsOpen(false);
+    setDataPickerTargetField(null);
+    setDataPickerPathStack([]);
+  };
+
+  const handleAddProjectRecord = async () => {
+    if (!dbEditSelectedTable || !user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('records')
+        .insert({
+          table_id: dbEditSelectedTable.id,
+          user_id: user.id,
+          data: JSON.stringify(dbEditNewRecordData),
+        })
+        .select('*')
+        .single();
+        
+      if (error) throw error;
+      
+      const newRecord = {
+          id: data.id,
+          created_at: data.created_at,
+          ...dbEditNewRecordData
+      };
+      
+      setDbEditRecords(prev => [...prev, newRecord]);
+      setIsDbEditAddingRecord(false);
+      setDbEditNewRecordData({});
+      alert("تمت إضافة السجل الجديد بنجاح!");
+    } catch (error: any) {
+       console.error("Error adding project record", error);
+       alert("فشل إضافة السجل للأسباب التالية: " + error.message);
+    }
+  };
+
+  const handleDeleteProjectRecord = async (recordId: string) => {
+    if (!confirm('هل أنت متأكد من رغبتك في حذف هذا السجل نهائياً؟')) return;
+    try {
+      const { error } = await supabase
+        .from('records')
+        .delete()
+        .eq('id', recordId);
+        
+      if (error) throw error;
+      setDbEditRecords(prev => prev.filter(r => r.id !== recordId));
+    } catch (error: any) {
+      console.error("Error deleting project record", error);
+      alert("فشل حذف السجل: " + error.message);
+    }
+  };
+
+  const handleUpdateProjectRecord = async () => {
+    if (!dbEditSelectedTable || !dbEditEditingRecord) return;
+    
+    const { id: recordId, created_at, ...recordPayload } = dbEditEditingRecord;
+    
+    try {
+      const { error } = await supabase
+        .from('records')
+        .update({
+          data: JSON.stringify(recordPayload)
+        })
+        .eq('id', recordId);
+        
+      if (error) throw error;
+      
+      setDbEditRecords(prev => prev.map(r => r.id === recordId ? dbEditEditingRecord : r));
+      setDbEditEditingRecord(null);
+      alert("✅ تم تحديث السجل بنجاح في قاعدة البيانات!");
+    } catch (error: any) {
+      console.error("Error updating project record", error);
+      alert("فشل تحديث السجل: " + error.message);
+    }
+  };
+
+  // Site Users Handlers (Registered users by site dynamic signup forms)
+  const handleBuilderCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !builderNewUserEmail.trim() || !builderNewUserPassword.trim()) {
+      alert("يرجى ملء الحقول المطلوبة (البريد الإلكتروني وكلمة المرور)");
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('site_users')
+        .insert({
+          owner_id: user.id,
+          email: builderNewUserEmail.trim(),
+          password: builderNewUserPassword,
+          name: builderNewUserName.trim() || null,
+          role: builderNewUserRole,
+        })
+        .select('*')
+        .single();
+        
+      if (error) throw error;
+      
+      setBuilderSiteUsers(prev => [...prev, data]);
+      setIsBuilderAddingUser(false);
+      setBuilderNewUserEmail('');
+      setBuilderNewUserName('');
+      setBuilderNewUserPassword('');
+      setBuilderNewUserRole('user');
+      alert("🎉 تم إنشاء حساب المستخدم بنجاح ومزامنته في قاعدة بيانات المشروع!");
+    } catch (error: any) {
+      console.error("Error creating builder site user:", error);
+      alert("فشل إنشاء الحساب: " + error.message);
+    }
+  };
+
+  const handleBuilderDeleteUser = async (uId: string) => {
+    if (!confirm("هل أنت متأكد من رغبتك في حذف هذا المستخدم من قاعدة البيانات نهائياً؟")) return;
+    try {
+      const { error } = await supabase
+        .from('site_users')
+        .delete()
+        .eq('id', uId);
+        
+      if (error) throw error;
+      setBuilderSiteUsers(prev => prev.filter(u => u.id !== uId));
+      alert("تم حذف حساب المستخدم بنجاح!");
+    } catch (error: any) {
+      console.error("Error deleting user:", error);
+      alert("فشل حذف حساب المستخدم: " + error.message);
+    }
+  };
 
   const handleSave = async (showSuccessAlert = false) => {
     if (!user || !id || isSavingRef.current) return;
@@ -2461,11 +2907,25 @@ export default function BuilderPage() {
 
             {/* Canvas */}
             <main
-              className={`${mobileView === "canvas" ? "flex" : "hidden"} md:flex flex-1 relative overflow-auto bg-white`}
-              onClick={() => selectElement(null)}
+              className={`${mobileView === "canvas" ? "flex" : "hidden"} md:flex flex-col flex-1 relative overflow-auto bg-white`}
+              onClick={(e) => {
+                if (e.target === e.currentTarget || (e.target as HTMLElement).id === "canvas-map") {
+                   selectElement(null);
+                }
+              }}
             >
+              {editingListId && (
+                 <div className="bg-indigo-50 border-b border-indigo-100 p-2 text-sm flex items-center gap-2 font-medium">
+                   <button onClick={() => useBuilderStore.getState().setEditingListId(null)} className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 transition px-2 py-1 bg-white rounded shadow-sm">
+                     ← Return to Page
+                   </button>
+                   <span className="text-indigo-800">Editing List Item Template</span>
+                 </div>
+              )}
               <div
+                id="canvas-map"
                 ref={canvasRef}
+                onClick={() => selectElement(null)}
                 className="w-full h-full min-h-screen bg-white relative overflow-hidden"
               >
                 <BuilderCanvasMap
@@ -2486,11 +2946,45 @@ export default function BuilderPage() {
               </div>
               {selectedElement ? (
                 <div className="p-4 space-y-6">
+                  {/* List Template Edit Button */}
+                  {[ "list", "simple_list", "card_list", "image_list",
+                    "masonry_list", "horizontal_list", "custom_list", "table",
+                    "avatar_list", "horizontal_card_list", "horizontal_chip_list", "social_media_list",
+                    "kanban_board", "calendar_list", "timeline_list", "carousel_list",
+                    "chat_list", "tree_list"].includes(selectedElement.type) && (
+                    <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 flex flex-col gap-2">
+                       <span className="text-xs font-semibold text-indigo-900">List Template</span>
+                       <p className="text-xs text-indigo-700">Design the internal layout of list items using drag & drop.</p>
+                       <button
+                         onClick={() => {
+                           useBuilderStore.getState().setEditingListId(selectedElement.id);
+                           useBuilderStore.getState().selectElement(null);
+                         }}
+                         className="bg-indigo-600 text-white text-xs font-medium px-3 py-2 rounded shadow-sm hover:bg-indigo-700 transition"
+                       >
+                         Edit List Item Template
+                       </button>
+                    </div>
+                  )}
+
                   {/* Content Edit */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Content
-                    </label>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="block text-xs font-medium text-gray-700">
+                        Content (المحتوى)
+                      </label>
+                      <button
+                        onClick={() => {
+                          setDataPickerTargetField("content");
+                          setDataPickerIsOpen(true);
+                          setDataPickerPathStack([]);
+                        }}
+                        className="text-3xs text-indigo-700 bg-indigo-50 hover:bg-indigo-100 font-extrabold px-2 py-0.5 rounded flex items-center gap-1 cursor-pointer transition border border-indigo-200"
+                        title="ربط محتوى هذا العنصر ببيانات قاعدة البيانات مباشرة كـ Adalo (Data Picker)"
+                      >
+                        ⚡ ربط بيانات ديناميكية
+                      </button>
+                    </div>
                     {renderContentEditor()}
                   </div>
 
@@ -2562,6 +3056,120 @@ export default function BuilderPage() {
                         />
                       </div>
                     )}
+
+                    {/* Position and Animation Edit */}
+                    <div className="space-y-4 pt-4 border-t border-gray-100">
+                      <h3 className="text-sm font-semibold text-gray-900 border-b pb-2 flex justify-between items-center">
+                        <span>الظهور المشروط (Conditional Visibility)</span>
+                        <span className="text-3xs font-mono text-gray-400">Adalo Filters</span>
+                      </h3>
+                      
+                      {!(selectedElement as any).visibilityConfig ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateElement(selectedElement.id, {
+                              visibilityConfig: { field: "", operator: "eq", value: "" }
+                            } as any);
+                          }}
+                          className="w-full text-center py-2 border border-dashed border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:text-indigo-600 hover:border-indigo-400 transition cursor-pointer"
+                        >
+                          + إضافة شروط ظهور لهذا المكون
+                        </button>
+                      ) : (
+                        <div className="p-3 bg-indigo-50/50 rounded-lg border border-indigo-100 space-y-3 text-right">
+                          <label className="block text-3xs font-extrabold text-indigo-900 uppercase">قيمة الحقل المراد مقارنته (Field to test)</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={(selectedElement as any).visibilityConfig?.field || ""}
+                              onChange={(e) => {
+                                updateElement(selectedElement.id, {
+                                  visibilityConfig: {
+                                    ...(selectedElement as any).visibilityConfig,
+                                    field: e.target.value
+                                  }
+                                } as any);
+                              }}
+                              className="flex-1 px-2.5 py-1.5 border rounded bg-white text-xs text-right outline-none"
+                              placeholder="مثال: {{ Logged In User > Name }}"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDataPickerTargetField("visibilityConfig.field");
+                                setDataPickerIsOpen(true);
+                                setDataPickerPathStack([]);
+                              }}
+                              className="px-2 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700 cursor-pointer"
+                              title="اختر حقل البيانات"
+                            >
+                              🪄
+                            </button>
+                          </div>
+
+                          <label className="block text-3xs font-extrabold text-indigo-900 uppercase">الشرط (Operator)</label>
+                          <select
+                            value={(selectedElement as any).visibilityConfig?.operator || "eq"}
+                            onChange={(e) => {
+                              updateElement(selectedElement.id, {
+                                visibilityConfig: {
+                                  ...(selectedElement as any).visibilityConfig,
+                                  operator: e.target.value
+                                }
+                              } as any);
+                            }}
+                            className="w-full px-2.5 py-1.5 border rounded bg-white text-xs text-right outline-none"
+                          >
+                            <option value="eq">يساوي (Equals)</option>
+                            <option value="neq">لا يساوي (Not Equals)</option>
+                            <option value="contains">يحتوي على (Contains)</option>
+                            <option value="gt">أكبر بـ (Greater Than)</option>
+                            <option value="lt">أصغر بـ (Less Than)</option>
+                          </select>
+
+                          <label className="block text-3xs font-extrabold text-indigo-900 uppercase">القيمة المقارن بها (Value to test against)</label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={(selectedElement as any).visibilityConfig?.value || ""}
+                              onChange={(e) => {
+                                updateElement(selectedElement.id, {
+                                  visibilityConfig: {
+                                    ...(selectedElement as any).visibilityConfig,
+                                    value: e.target.value
+                                  }
+                                } as any);
+                              }}
+                              className="flex-1 px-2.5 py-1.5 border rounded bg-white text-xs text-right outline-none"
+                              placeholder="القيمة المقارنة..."
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDataPickerTargetField("visibilityConfig.value");
+                                setDataPickerIsOpen(true);
+                                setDataPickerPathStack([]);
+                              }}
+                              className="px-2 bg-indigo-600 text-white rounded text-xs hover:bg-indigo-700 cursor-pointer"
+                              title="اختر حقل البيانات"
+                            >
+                              🪄
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateElement(selectedElement.id, { visibilityConfig: undefined } as any);
+                            }}
+                            className="w-full text-center py-1 mt-1 bg-red-50 hover:bg-red-100 text-red-650 text-3xs font-bold rounded transition cursor-pointer"
+                          >
+                            ✕ حذف الشرط والظهور للكل
+                          </button>
+                        </div>
+                      )}
+                    </div>
 
                     {/* Position and Animation Edit */}
                     <div className="space-y-4">
@@ -2691,6 +3299,17 @@ export default function BuilderPage() {
                     selectedElement.type === "masonry_list" ||
                     selectedElement.type === "horizontal_list" ||
                     selectedElement.type === "custom_list" ||
+                    selectedElement.type === "avatar_list" ||
+                    selectedElement.type === "horizontal_card_list" ||
+                    selectedElement.type === "horizontal_chip_list" ||
+                    selectedElement.type === "social_media_list" ||
+                    selectedElement.type === "kanban_board" ||
+                    selectedElement.type === "calendar_list" ||
+                    selectedElement.type === "timeline_list" ||
+                    selectedElement.type === "carousel_list" ||
+                    selectedElement.type === "chat_list" ||
+                    selectedElement.type === "tree_list" ||
+                    selectedElement.type === "table" ||
                     selectedElement.type === "form" ||
                     selectedElement.type === "text" ||
                     selectedElement.type === "image" ||
@@ -2759,7 +3378,7 @@ export default function BuilderPage() {
                             <span>files (Media Storage Uploads)</span>
                           </label>
 
-                          {userTables.map((t) => (
+                          {getProjectTables().map((t) => (
                             <label key={t.id} className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer hover:bg-white p-1 rounded transition-colors">
                               <input
                                 type="checkbox"
@@ -2867,7 +3486,18 @@ export default function BuilderPage() {
                           selectedElement.type === "image_list" ||
                           selectedElement.type === "masonry_list" ||
                           selectedElement.type === "horizontal_list" ||
-                          selectedElement.type === "custom_list") && (
+                          selectedElement.type === "custom_list" ||
+                          selectedElement.type === "avatar_list" ||
+                          selectedElement.type === "horizontal_card_list" ||
+                          selectedElement.type === "horizontal_chip_list" ||
+                          selectedElement.type === "social_media_list" ||
+                          selectedElement.type === "kanban_board" ||
+                          selectedElement.type === "calendar_list" ||
+                          selectedElement.type === "timeline_list" ||
+                          selectedElement.type === "carousel_list" ||
+                          selectedElement.type === "chat_list" ||
+                          selectedElement.type === "tree_list" ||
+                          selectedElement.type === "table") && (
                            <div className="space-y-3 mt-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100 text-left">
                              <div className="text-xs text-blue-700 font-semibold mb-1">
                                📂 ربط الحقول وعرض البيانات المخصصة (Fields Mapping)
@@ -3300,94 +3930,792 @@ export default function BuilderPage() {
       )}
 
       {topTab === "database" && (
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 flex flex-col items-center">
-          <div className="max-w-xl w-full bg-white p-6 rounded-xl shadow-sm border mt-4">
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
-                <TableIcon className="w-8 h-8" />
+        <div className="flex-1 overflow-hidden bg-gray-50 flex flex-col md:flex-row h-full">
+          {/* Sidebar Collections Panel */}
+          <div className="w-full md:w-80 border-b md:border-b-0 md:border-r bg-white flex flex-col shrink-0">
+            <div className="p-4 border-b flex items-center justify-between bg-gray-50">
+              <div className="flex items-center space-x-2">
+                <Database className="w-5 h-5 text-indigo-600" />
+                <h3 className="font-bold text-gray-800 text-sm">جداول المشروع (Project Tables)</h3>
               </div>
-              <div>
-                <h2 className="text-base font-bold text-gray-800">Database & Schema Sync</h2>
-                <p className="text-xs text-gray-500">View schema mapping status and test live connection properties.</p>
-              </div>
+              <span className="text-3xs bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full uppercase">
+                {getProjectTables().length} متصل
+              </span>
             </div>
 
-            <div className="space-y-6">
-              <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-100 flex items-start gap-3">
-                <span className="text-emerald-500 mt-0.5 text-lg">●</span>
-                <div>
-                  <h3 className="font-semibold text-emerald-800 text-sm">Supabase Connection Active</h3>
-                  <p className="text-xs text-emerald-600 mt-0.5">Your page blocks, dynamic checklists, and forms are fully linked to the live cloud database.</p>
+            <div className="p-3 border-b bg-gray-50/50">
+              {isDbEditCreatingTable ? (
+                <form onSubmit={handleCreateProjectTable} className="space-y-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="اسم الجدول الجديد (بالعربية أو الإنجليزية)"
+                    value={dbEditNewTableName}
+                    onChange={(e) => setDbEditNewTableName(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-xs border rounded-md outline-none focus:border-indigo-500"
+                  />
+                  <div className="flex gap-1">
+                    <button
+                      type="submit"
+                      className="flex-1 py-1 px-2.5 text-3xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition cursor-pointer text-center"
+                    >
+                      إنشاء الجدول
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsDbEditCreatingTable(false)}
+                      className="py-1 px-2 text-3xs border text-gray-600 rounded-md hover:bg-gray-150 transition cursor-pointer"
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <button
+                  onClick={() => setIsDbEditCreatingTable(true)}
+                  className="w-full py-2 px-3 border border-dashed border-indigo-300 hover:border-indigo-500 hover:bg-indigo-50/30 text-indigo-600 rounded-lg flex items-center justify-center text-xs font-semibold transition cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" /> إنشاء جدول جديد للمشروع
+                </button>
+              )}
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-2 space-y-1">
+              {getProjectTables().length === 0 ? (
+                <div className="p-6 text-center text-gray-500 text-xs">
+                  لا توجد جداول بيانات معينة لهذا المشروع حتى الآن. قم بإنشاء جدول جديد للاستخدام!
                 </div>
-              </div>
-
-              <div className="border rounded-lg p-4 space-y-3 bg-gray-50">
-                <h3 className="text-2xs font-bold text-gray-500 uppercase tracking-wider">Dynamic Mapped Objects</h3>
-                <ul className="text-xs space-y-2 text-gray-700">
-                  <li className="flex justify-between items-center p-2.5 bg-white rounded border">
-                    <span className="font-semibold font-mono">public.files</span>
-                    <span className="text-3xs bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full uppercase tracking-widest">Auto-Healed Failsafe</span>
-                  </li>
-                  <li className="flex justify-between items-center p-2.5 bg-white rounded border">
-                    <span className="font-semibold font-mono">public.pages</span>
-                    <span className="text-3xs bg-gray-100 text-gray-600 font-semibold px-2 py-0.5 rounded-full uppercase">Dynamic Content</span>
-                  </li>
-                  <li className="flex justify-between items-center p-2.5 bg-white rounded border">
-                    <span className="font-semibold font-mono">public.records</span>
-                    <span className="text-3xs bg-gray-100 text-gray-600 font-semibold px-2 py-0.5 rounded-full uppercase">Form Entries</span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="p-4 rounded-lg bg-amber-50 border border-amber-100">
-                <h4 className="font-semibold text-amber-800 text-xs">Altered Table Columns Manually?</h4>
-                <p className="text-3xs text-amber-700 mt-1 leading-relaxed">
-                  PostgREST caches the schema cache internally. If you modified table schemas (like the missing <code>name</code> column in the <code>files</code> table), click below to validate if the tables respond correctly to your client instance.
-                </p>
-                <div className="mt-4 flex gap-2">
-                  <button
-                    onClick={async () => {
-                      try {
-                        const { error } = await supabase.from('files').select('id').limit(1);
-                        if (error) throw error;
-                        alert("Database connection synced! Active response verified successfully.");
-                      } catch (err: any) {
-                        alert("Sync validation error: " + err.message);
-                      }
+              ) : (
+                getProjectTables().map((table) => (
+                  <div
+                    key={table.id}
+                    className={`group w-full rounded-lg transition-all p-2 flex items-center justify-between cursor-pointer ${
+                      dbEditSelectedTable?.id === table.id
+                        ? "bg-indigo-50 text-indigo-900 border border-indigo-200"
+                        : "text-gray-700 hover:bg-gray-100/70 border border-transparent"
+                    }`}
+                    onClick={() => {
+                      setDbEditSelectedTable(table);
+                      setDbEditViewMode('data');
                     }}
-                    className="px-3 py-1.5 bg-amber-600 text-white hover:bg-amber-700 rounded text-xs font-semibold shadow-xs transition cursor-pointer"
                   >
-                    Sync & Test Connection
-                  </button>
-                  <button
-                    onClick={() => router.push("/dashboard")}
-                    className="px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded text-xs font-medium transition cursor-pointer"
-                  >
-                    Go to Dashboard
-                  </button>
-                </div>
-              </div>
+                    <div className="flex items-center space-x-2 min-w-0 pr-2">
+                      <TableIcon className="w-4 h-4 text-indigo-500 shrink-0" />
+                      <span className="text-xs font-semibold truncate text-left">{table.name}</span>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteProjectTable(table.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                      title="حذف الجدول بالكامل"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+            
+            <div className="p-4 border-t bg-gray-50 text-3xs text-gray-500 space-y-1 leading-relaxed">
+              <p>💡 <b>تنبيه فائق الأهمية:</b></p>
+              <p>تظهر هنا الجداول المرتبطة بعناصر التصميم الحالي للمشروع فقط لتوفير بيئة عمل سريعة ومنظمة! يمكنك رفع الصور والمستندات بمرونة في الحقول وسيتم حفظ الروابط ديناميكياً.</p>
             </div>
           </div>
+
+          {/* Main Collection Data Editor */}
+          <div className="flex-1 bg-white flex flex-col overflow-hidden">
+            {dbEditSelectedTable ? (
+              <div className="flex-1 flex flex-col overflow-hidden">
+                {/* Collection Sub-header */}
+                <div className="px-6 py-4 border-b flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white shrink-0 gap-3">
+                  <div>
+                    <h2 className="text-base font-bold text-gray-800 flex items-center gap-2">
+                      <TableIcon className="w-5 h-5 text-indigo-600" />
+                      {dbEditSelectedTable.name}
+                    </h2>
+                    <p className="text-2xs text-gray-400 mt-0.5 font-mono">ID: {dbEditSelectedTable.id}</p>
+                  </div>
+
+                  <div className="flex items-center space-x-2 bg-gray-100 p-1 rounded-lg self-stretch sm:self-auto shrink-0">
+                    <button
+                      onClick={() => setDbEditViewMode('data')}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                        dbEditViewMode === 'data'
+                          ? "bg-white text-gray-900 shadow-xs"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      البيانات المسجلة (Data)
+                    </button>
+                    <button
+                      onClick={() => setDbEditViewMode('schema')}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                        dbEditViewMode === 'schema'
+                          ? "bg-white text-gray-900 shadow-xs"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      هيكلية الجدول (Schema)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sub-view switcher */}
+                {dbEditViewMode === 'data' ? (
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    {/* Data Toolbar */}
+                    <div className="px-6 py-3 border-b bg-gray-50 flex items-center justify-between shrink-0">
+                      <div className="text-xs text-gray-500 font-medium">
+                        إجمالي السجلات: <span className="font-bold text-gray-800 font-mono">{dbEditRecords.length}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            // Reset and open adding record modal
+                            const emptyData = dbEditSelectedTable.fields.reduce((acc: any, f: any) => {
+                              acc[f.name] = '';
+                              return acc;
+                            }, {} as any);
+                            setDbEditNewRecordData(emptyData);
+                            setIsDbEditAddingRecord(true);
+                          }}
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-md shadow-2xs flex items-center transition cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" /> إضافة سجل جديد
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Data Grid list */}
+                    <div className="flex-1 overflow-auto">
+                      {dbEditLoadingRecords ? (
+                        <div className="p-12 text-center text-gray-500 text-xs">جاري تحميل سجلات البيانات...</div>
+                      ) : dbEditRecords.length === 0 ? (
+                        <div className="p-16 text-center flex flex-col items-center justify-center">
+                          <TableIcon className="w-12 h-12 text-gray-200 mb-2" />
+                          <p className="text-gray-500 text-xs">لا يوجد بيانات مسجلة في هذا الجدول حالياً.</p>
+                          <p className="text-3xs text-gray-400 mt-1 max-w-xs text-center">أدخل بيانات أو اربط النماذج من واجهة التصنيف لتبدأ باستلام البيانات وحفظها تلقائياً.</p>
+                        </div>
+                      ) : (
+                        <div className="min-w-full inline-block align-middle">
+                          <div className="overflow-hidden border-b border-gray-200">
+                            <table className="min-w-full divide-y divide-gray-200 text-right" dir="rtl">
+                              <thead className="bg-gray-50/70">
+                                <tr>
+                                  <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider text-right"># ID</th>
+                                  {dbEditSelectedTable.fields.map((field: any, index: number) => (
+                                    <th key={field.id || field.name || index} className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider text-right">
+                                      {field.name}
+                                    </th>
+                                  ))}
+                                  <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider text-right">تاريخ الإضافة</th>
+                                  <th className="px-4 py-3 text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">الإجراءات</th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-100">
+                                {dbEditRecords.map((record) => (
+                                  <tr key={record.id} className="hover:bg-gray-50/50 transition">
+                                    <td className="px-4 py-3 text-2xs font-mono text-gray-400 select-all truncate max-w-[80px]" title={record.id}>
+                                      {String(record.id).slice(0, 8)}...
+                                    </td>
+                                    {dbEditSelectedTable.fields.map((field: any, index: number) => {
+                                      const val = record[field.name];
+                                      const isUrl = typeof val === 'string' && (val.startsWith('http://') || val.startsWith('https://'));
+                                      const isImage = isUrl && (val.match(/\.(jpeg|jpg|gif|png|webp|svg|bmp)/i) || val.includes('supabase') || val.includes('cloudinary'));
+
+                                      return (
+                                        <td key={field.id || field.name || index} className="px-4 py-3 text-xs text-gray-700 font-medium font-semibold">
+                                          {isImage ? (
+                                            <div className="flex items-center space-x-2 space-x-reverse">
+                                              <img
+                                                src={val}
+                                                alt="File"
+                                                className="w-10 h-10 object-cover rounded-md border shadow-2xs shrink-0 bg-gray-50"
+                                                onError={(e) => {
+                                                  (e.currentTarget as HTMLImageElement).style.display = 'none';
+                                                }}
+                                              />
+                                              <a
+                                                href={val}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-indigo-600 hover:text-indigo-800 text-3xs font-semibold truncate hover:underline max-w-[120px]"
+                                              >
+                                                معاينة الرابط
+                                              </a>
+                                            </div>
+                                          ) : isUrl ? (
+                                            <a
+                                              href={val}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="text-indigo-600 hover:text-indigo-800 text-3xs font-semibold underline truncate max-w-[150px] block"
+                                              title={val}
+                                            >
+                                              {val}
+                                            </a>
+                                          ) : (
+                                            <span className="truncate max-w-[180px] block" title={String(val || '')}>
+                                              {val !== undefined && val !== null ? String(val) : "-"}
+                                            </span>
+                                          )}
+                                        </td>
+                                      );
+                                    })}
+                                    <td className="px-4 py-3 text-2xs text-gray-400 font-mono">
+                                      {record.created_at ? new Date(record.created_at).toLocaleString('ar-EG', { hour12: true }) : "-"}
+                                    </td>
+                                    <td className="px-4 py-3 text-center">
+                                      <div className="flex items-center justify-center gap-1.5">
+                                        <button
+                                          onClick={() => setDbEditEditingRecord(record)}
+                                          className="p-1.5 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-md transition cursor-pointer"
+                                          title="تعديل السجل"
+                                        >
+                                          <Edit className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                          onClick={() => handleDeleteProjectRecord(record.id)}
+                                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-md transition cursor-pointer"
+                                          title="حذف البيانات كاملة"
+                                        >
+                                          <Trash2 className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Schema Config view */
+                  <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    <div className="bg-gray-50 border rounded-xl p-5 space-y-4">
+                      <h3 className="font-bold text-gray-800 text-xs flex items-center space-x-2 space-x-reverse">
+                        <Plus className="w-4 h-4 text-indigo-600" />
+                        <span>إضافة حقل جديد إلى هذا الجدول (Add Table Column)</span>
+                      </h3>
+                      
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div className="space-y-1">
+                            <label className="block text-3xs font-extrabold text-gray-500 uppercase">اسم الحقل (Field Name)</label>
+                            <input
+                              type="text"
+                              placeholder="مثال: post_author أو liked_by"
+                              value={dbEditNewFieldName}
+                              onChange={(e) => setDbEditNewFieldName(e.target.value)}
+                              className="w-full px-3 py-1.5 border rounded-md text-xs outline-none focus:border-indigo-500"
+                            />
+                          </div>
+
+                          <div className="space-y-1">
+                            <label className="block text-3xs font-extrabold text-gray-500 uppercase font-mono">نوع الحقل (Field Type)</label>
+                            <select
+                              value={dbEditNewFieldType}
+                              onChange={(e: any) => {
+                                setDbEditNewFieldType(e.target.value);
+                                if (e.target.value === 'relationship' && userTables.length > 0) {
+                                  // Auto-select first available table (excluding current if self-relationship isn't default)
+                                  const defaultTarget = userTables.find(t => t.id !== dbEditSelectedTable?.id) || userTables[0];
+                                  if (defaultTarget) setDbEditRelationRelatedTableId(defaultTarget.id);
+                                }
+                              }}
+                              className="w-full px-3 py-1.5 border rounded-md text-xs outline-none bg-white focus:border-indigo-500"
+                            >
+                              <option value="text">نصّي / رابط ملف (Text / File URL)</option>
+                              <option value="number">رقمي (Number)</option>
+                              <option value="date">تاريخ (Date)</option>
+                              <option value="boolean">نعم أو لا (Boolean)</option>
+                              <option value="relationship">🔗 علاقة (Relationship - ربط بالجداول) </option>
+                            </select>
+                          </div>
+
+                          <div className="flex items-end">
+                            {dbEditNewFieldType !== 'relationship' && (
+                              <button
+                                type="button"
+                                onClick={handleAddProjectTableField}
+                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2 px-4 rounded-md shadow-2xs transition cursor-pointer"
+                              >
+                                إضافة العمود
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {dbEditNewFieldType === 'relationship' && (
+                          <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-lg space-y-4 animate-fade-in text-right">
+                            <h4 className="text-xs font-bold text-indigo-950">إعدادات العلاقة المتقدمة (Adalo-style Relation Settings)</h4>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div className="space-y-1">
+                                <label className="block text-3xs font-extrabold text-indigo-900 uppercase">الجدول المرتبط (Related Table)</label>
+                                <select
+                                  value={dbEditRelationRelatedTableId}
+                                  onChange={(e) => setDbEditRelationRelatedTableId(e.target.value)}
+                                  className="w-full px-3 py-1.5 border border-indigo-200 rounded-md text-xs outline-none bg-white focus:border-indigo-500"
+                                >
+                                  <option value="">-- اختر جدول مستهدف --</option>
+                                  {userTables.map((t) => (
+                                    <option key={t.id} value={t.id}>
+                                      {t.name} {t.id === dbEditSelectedTable?.id ? "(هذا الجدول - Self)" : ""}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="block text-3xs font-extrabold text-indigo-900 uppercase">نوع العلاقة (Cardinality Type)</label>
+                                <select
+                                  value={dbEditRelationRelationType}
+                                  onChange={(e) => setDbEditRelationRelationType(e.target.value)}
+                                  className="w-full px-3 py-1.5 border border-indigo-200 rounded-md text-xs outline-none bg-white focus:border-indigo-500"
+                                >
+                                  <option value="one_to_many">واحد إلى متعدد (1:N - One To Many)</option>
+                                  <option value="many_to_many">متعدد إلى متعدد (N:M - Many To Many)</option>
+                                  <option value="one_to_one">واحد إلى واحد (1:1 - One To One)</option>
+                                  <option value="self_relationship">علاقة ذاتية مع نفسه (Self Relationship)</option>
+                                </select>
+                              </div>
+
+                              <div className="space-y-1">
+                                <label className="block text-3xs font-extrabold text-indigo-900 uppercase">اسم الحقل العكسي (Related Reverse Name)</label>
+                                <input
+                                  type="text"
+                                  placeholder="اختياري (مثال: Author's Posts)"
+                                  value={dbEditRelationRelatedFieldName}
+                                  onChange={(e) => setDbEditRelationRelatedFieldName(e.target.value)}
+                                  className="w-full px-3 py-1.5 border border-indigo-200 rounded-md text-xs outline-none focus:border-indigo-500"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end pt-2">
+                              <button
+                                type="button"
+                                onClick={handleAddProjectTableField}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold py-2 px-6 rounded-md shadow-2xs transition cursor-pointer"
+                              >
+                                تأكيد العمود وحفظ العلاقة
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-bold text-gray-850 text-xs">الأعمدة والحقول الحالية (Active Schema Columns)</h4>
+                      <div className="border rounded-xl bg-white overflow-hidden divide-y">
+                        {dbEditSelectedTable.fields.map((field: any) => (
+                          <div key={field.id} className="p-4 flex items-center justify-between text-right hover:bg-gray-50 transition">
+                            <div className="flex items-center space-x-4 space-x-reverse">
+                              <span className="text-xs bg-gray-100 font-mono font-semibold px-2.5 py-1 rounded text-gray-700 uppercase">
+                                {field.type}
+                              </span>
+                              <span className="font-semibold text-gray-800 text-xs">{field.name}</span>
+                              {field.type === "relationship" && (
+                                <span className="text-3xs text-indigo-700 bg-indigo-50 border border-indigo-100 font-medium px-2 py-0.5 rounded-full">
+                                  مرتبط بـ {userTables.find(t => t.id === field.relatedTableId)?.name || "جدول مجهول"} ({
+                                    field.relationType === "one_to_many" ? "One to Many" :
+                                    field.relationType === "many_to_many" ? "Many to Many" :
+                                    field.relationType === "one_to_one" ? "One to One" : "Self-Relation"
+                                  })
+                                </span>
+                              )}
+                            </div>
+
+                            <button
+                              onClick={() => handleRemoveProjectTableField(field.id)}
+                              disabled={field.name.toLowerCase() === 'name'}
+                              className={`p-1.5 rounded-md transition ${
+                                field.name.toLowerCase() === 'name' 
+                                  ? "text-gray-300 cursor-not-allowed" 
+                                  : "text-gray-400 hover:text-red-600 hover:bg-red-50 cursor-pointer"
+                              }`}
+                              title={field.name.toLowerCase() === 'name' ? "الحقل الأساسي محمي ولا يُمكن حذفه" : "حذف العمود تماماً"}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-gray-50">
+                <Database className="w-16 h-16 text-indigo-300 mb-4 animate-pulse" />
+                <h3 className="text-base font-bold text-gray-700">الرجاء تحديد جدول من على اليمين</h3>
+                <p className="text-xs text-gray-500 max-w-sm mt-1">تتيح لك هذه المنصة إدارة البيانات مدعومة برفع حقيقي للملفات والصور وحفظ روابطها مباشرة، بالإضافة لحذف وتعديل الجداول وتفاصيل السجلات بمرونة.</p>
+              </div>
+            )}
+          </div>
+
+          {/* New Record Modal */}
+          {isDbEditAddingRecord && dbEditSelectedTable && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" dir="rtl">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-scale-up">
+                <div className="px-6 py-4 border-b bg-indigo-50 flex justify-between items-center text-right shrink-0">
+                  <h3 className="text-sm font-extrabold text-indigo-900">
+                    📝 إضافة سجل جديد لجدول: {dbEditSelectedTable.name}
+                  </h3>
+                  <button
+                    onClick={() => setIsDbEditAddingRecord(false)}
+                    className="text-gray-400 hover:text-gray-700 p-1 text-md font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                <div className="p-6 overflow-y-auto space-y-4 max-h-[70vh]">
+                  {dbEditSelectedTable.fields.map((field: any, index: number) => {
+                    const isRelationship = field.type === "relationship";
+                    const relatedRecs = isRelationship ? (allTablesRecords[field.relatedTableId] || []) : [];
+                    return (
+                      <div key={field.name || field.id || index} className="space-y-1 text-right">
+                        <label className="block text-xs font-semibold text-gray-700">
+                          {field.name} <span className="text-3xs text-gray-400 font-mono">({field.type})</span>
+                        </label>
+                        <div className="flex gap-2">
+                          {isRelationship ? (
+                            <select
+                              value={dbEditNewRecordData[field.name] || ""}
+                              onChange={(e) => setDbEditNewRecordData((prev: any) => ({ ...prev, [field.name]: e.target.value }))}
+                              className="flex-1 px-3 py-1.5 border rounded-lg text-xs outline-none text-right bg-white focus:border-indigo-500"
+                            >
+                              <option value="">-- اختر سجل مرتبط --</option>
+                              {relatedRecs.map((rec) => (
+                                <option key={rec.id} value={rec.id}>
+                                  {rec.name || rec.Name || rec.title || rec.Title || rec.id} (ID: {rec.id?.substring(0, 6)})
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                              value={dbEditNewRecordData[field.name] || ''}
+                              onChange={(e) => setDbEditNewRecordData((prev: any) => ({ ...prev, [field.name]: e.target.value }))}
+                              className="flex-1 px-3 py-1.5 border rounded-lg text-xs outline-none text-right placeholder-gray-300 focus:border-indigo-500"
+                              placeholder={`أدخل قيمة الحقل ${field.name}...`}
+                            />
+                          )}
+                          {!isRelationship && (
+                            <SupabaseUploadWidget
+                              buttonText="رفع ملف"
+                              className="px-3.5 py-1 text-xs bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg transition shrink-0 cursor-pointer"
+                              onSuccess={(url) => {
+                                setDbEditNewRecordData((prev: any) => ({ ...prev, [field.name]: url }));
+                                alert("✅ تم رفع الملف/الصورة بنجاح في السيرفر وتثبيت رابط الخدمة في الخلية!");
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <p className="text-3xs text-gray-400 text-right leading-relaxed pt-2">
+                    💡 يمكنك رفع الصور والمستندات بمرونة في أي حقل بالنقر على زر <b>(رفع ملف)</b>، فيتم تخزينها بأمان في التخزين السحابي وووضع الرابط المباشر للملف تلقائياً في السجل.
+                  </p>
+                </div>
+
+                <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsDbEditAddingRecord(false)}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-xs font-medium cursor-pointer"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddProjectRecord}
+                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer"
+                  >
+                    حفظ السجل
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Edit Record Modal */}
+          {dbEditEditingRecord && dbEditSelectedTable && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" dir="rtl">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col animate-scale-up">
+                <div className="px-6 py-4 border-b bg-indigo-50 flex justify-between items-center text-right shrink-0">
+                  <h3 className="text-sm font-extrabold text-indigo-900">
+                    ✍️ تعديل السجل المختار في جدول: {dbEditSelectedTable.name}
+                  </h3>
+                  <button
+                    onClick={() => setDbEditEditingRecord(null)}
+                    className="text-gray-400 hover:text-gray-700 p-1 text-md font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                <div className="p-6 overflow-y-auto space-y-4 max-h-[70vh]">
+                  {dbEditSelectedTable.fields.map((field: any, index: number) => {
+                    const isRelationship = field.type === "relationship";
+                    const relatedRecs = isRelationship ? (allTablesRecords[field.relatedTableId] || []) : [];
+                    return (
+                      <div key={field.name || field.id || index} className="space-y-1 text-right">
+                        <label className="block text-xs font-semibold text-gray-700">
+                          {field.name} <span className="text-3xs text-gray-400 font-mono">({field.type})</span>
+                        </label>
+                        <div className="flex gap-2">
+                          {isRelationship ? (
+                            <select
+                              value={dbEditEditingRecord[field.name] !== undefined ? dbEditEditingRecord[field.name] : ""}
+                              onChange={(e) => setDbEditEditingRecord((prev: any) => ({ ...prev, [field.name]: e.target.value }))}
+                              className="flex-1 px-3 py-1.5 border rounded-lg text-xs outline-none text-right bg-white focus:border-indigo-500"
+                            >
+                              <option value="">-- اختر سجل مرتبط --</option>
+                              {relatedRecs.map((rec) => (
+                                <option key={rec.id} value={rec.id}>
+                                  {rec.name || rec.Name || rec.title || rec.Title || rec.id} (ID: {rec.id?.substring(0, 6)})
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+                              value={dbEditEditingRecord[field.name] !== undefined ? dbEditEditingRecord[field.name] : ''}
+                              onChange={(e) => setDbEditEditingRecord((prev: any) => ({ ...prev, [field.name]: e.target.value }))}
+                              className="flex-1 px-3 py-1.5 border rounded-lg text-xs outline-none text-right placeholder-gray-300 focus:border-indigo-500"
+                              placeholder={`تحديث قيمة الحقل ${field.name}...`}
+                            />
+                          )}
+                          {!isRelationship && (
+                            <SupabaseUploadWidget
+                              buttonText="رفع ملف"
+                              className="px-3.5 py-1 text-xs bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg transition shrink-0 cursor-pointer"
+                              onSuccess={(url) => {
+                                setDbEditEditingRecord((prev: any) => ({ ...prev, [field.name]: url }));
+                                alert("✅ تم رفع الملف/الصورة الجديدة وتحديث الرابط!");
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <p className="text-3xs text-gray-400 text-right leading-relaxed pt-2">
+                    💡 يمكنك رفع مستند جديد أو تعديل البيانات يدوياً ثم النقر على حفظ التعديلات لتحديث قاعدة البيانات فوراً.
+                  </p>
+                </div>
+
+                <div className="px-6 py-4 border-t bg-gray-50 flex justify-end gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setDbEditEditingRecord(null)}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-xs font-medium cursor-pointer"
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleUpdateProjectRecord}
+                    className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold shadow-xs transition cursor-pointer"
+                  >
+                    حفظ التعديلات
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {topTab === "users" && (
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-white flex flex-col items-center justify-center">
-          <UserPlus className="w-16 h-16 text-gray-300 mb-4" />
-          <h2 className="text-xl font-bold text-gray-700 mb-2">
-            User Management
-          </h2>
-          <p className="text-gray-500 text-center max-w-sm mb-6">
-            View and manage users who signed up through your site&apos;s Auth
-            forms.
-          </p>
-          <button
-            onClick={() => router.push("/dashboard")}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md"
-          >
-            Manage Users
-          </button>
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 bg-gray-50 flex flex-col" dir="rtl">
+          {/* Users Header section */}
+          <div className="max-w-6xl w-full mx-auto space-y-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b pb-4 shrink-0 text-right">
+              <div>
+                <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                  <UserPlus className="w-6 h-6 text-indigo-600" />
+                  إدارة مستخدمي التطبيق (Users Management)
+                </h2>
+                <p className="text-xs text-gray-500 mt-1">عرض، إضافة، وحذف حسابات الأعضاء والعملاء المسجلين في تطبيقك الحالي عبر نماذج المصادقة.</p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setBuilderNewUserEmail('');
+                  setBuilderNewUserName('');
+                  setBuilderNewUserPassword('');
+                  setBuilderNewUserRole('user');
+                  setIsBuilderAddingUser(true);
+                }}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-lg shadow-xs flex items-center gap-1.5 transition cursor-pointer self-stretch sm:self-auto text-center justify-center mr-auto sm:mr-0"
+              >
+                <Plus className="w-4 h-4" /> إضافة مستخدم جديد (Add User)
+              </button>
+            </div>
+
+            {/* Users Data Table */}
+            <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-right">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-gray-600">البريد الإلكتروني (Email)</th>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-gray-600">الاسم بالكامل (Name)</th>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-gray-600 font-mono">كلمة المرور المسجلة</th>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-gray-600">الصلاحية (Role)</th>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-gray-600">تاريخ التسجيل</th>
+                      <th className="px-5 py-3.5 text-xs font-semibold text-gray-650 text-center">حذف الحساب</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {builderSiteUsersLoading ? (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-gray-500 text-xs font-medium">جاري تحميل الأعضاء من قاعدة البيانات...</td>
+                      </tr>
+                    ) : builderSiteUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="p-12 text-center text-gray-500">
+                          <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <UserPlus className="w-6 h-6" />
+                          </div>
+                          <p className="text-xs font-semibold text-gray-700">لا يوجد مستخدمون مسجلون في التطبيق حالياً.</p>
+                          <p className="text-3xs text-gray-400 mt-1">سيتم إدراج أي مستخدم يقوم بالتسجيل من خلال النموذج في موقعك تلقائياً هنا في جدول users بقاعدة البيانات المخصصة.</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      builderSiteUsers.map((siteUser) => (
+                        <tr key={siteUser.id} className="hover:bg-gray-50/50 transition">
+                          <td className="px-5 py-4 text-xs font-semibold text-gray-900 select-all">{siteUser.email}</td>
+                          <td className="px-5 py-4 text-xs text-gray-700 font-medium">{siteUser.name || "-"}</td>
+                          <td className="px-5 py-4 text-xs font-mono text-gray-500 font-medium select-all" title={siteUser.password}>
+                            {siteUser.password || "••••••••"}
+                          </td>
+                          <td className="px-5 py-4 text-xs">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-3xs font-extrabold capitalize ${
+                              siteUser.role === 'admin' 
+                                ? 'bg-purple-100 text-purple-800' 
+                                : 'bg-indigo-100 text-indigo-800'
+                            }`}>
+                              {siteUser.role === 'admin' ? 'مدير (Admin)' : 'مستخدم (User)'}
+                            </span>
+                          </td>
+                          <td className="px-5 py-4 text-2xs text-gray-400 font-mono">
+                            {siteUser.created_at ? new Date(siteUser.created_at).toLocaleString('ar-EG', { hour12: true }) : "-"}
+                          </td>
+                          <td className="px-5 py-4 text-center">
+                            <button
+                              onClick={() => handleBuilderDeleteUser(siteUser.id)}
+                              className="p-1.5 text-red-400 hover:text-red-700 hover:bg-red-50 rounded-md transition cursor-pointer"
+                              title="إزالة هذا الحساب بشكل نهائي من قاعدة البيانات"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* User Add dialog Modal */}
+          {isBuilderAddingUser && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col animate-scale-up">
+                <div className="px-6 py-4 bg-indigo-50 border-b text-right flex justify-between items-center shrink-0">
+                  <h3 className="text-sm font-extrabold text-indigo-900">
+                    👤 إضافة حساب مستخدم يدوي جديد في قاعدة البيانات
+                  </h3>
+                  <button
+                    onClick={() => setIsBuilderAddingUser(false)}
+                    className="text-gray-400 hover:text-gray-700 p-1 text-md font-bold"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <form onSubmit={handleBuilderCreateUser} className="p-6 space-y-4 text-right">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-semibold text-gray-700">البريد الإلكتروني للعميل *</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="name@example.com"
+                      value={builderNewUserEmail}
+                      onChange={(e) => setBuilderNewUserEmail(e.target.value)}
+                      className="w-full px-3 py-1.5 border rounded-lg text-xs outline-none text-left placeholder-gray-300 focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1 bg-white">
+                    <label className="block text-xs font-semibold text-gray-700">كلمة المرور للعميل *</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="الأرقام أو الحروف لتسجيل الدخول"
+                      value={builderNewUserPassword}
+                      onChange={(e) => setBuilderNewUserPassword(e.target.value)}
+                      className="w-full px-3 py-1.5 border rounded-lg text-xs outline-none text-left placeholder-gray-300 focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1 pb-1">
+                    <label className="block text-xs font-semibold text-gray-700">الاسم بالكامل (اختياري)</label>
+                    <input
+                      type="text"
+                      placeholder="الاسم الأول أو العائلي"
+                      value={builderNewUserName}
+                      onChange={(e) => setBuilderNewUserName(e.target.value)}
+                      className="w-full px-3 py-1.5 border rounded-lg text-xs outline-none text-right placeholder-gray-300 focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div className="space-y-1 bg-white">
+                    <label className="block text-xs font-semibold text-gray-700">الصلاحيات المصاحبة</label>
+                    <select
+                      value={builderNewUserRole}
+                      onChange={(e: any) => setBuilderNewUserRole(e.target.value)}
+                      className="w-full px-3 py-1.5 border rounded-lg text-xs bg-white outline-none focus:border-indigo-500"
+                    >
+                      <option value="user">مستخدم عادي (User)</option>
+                      <option value="admin">مدير النظام (Admin)</option>
+                    </select>
+                  </div>
+
+                  <div className="px-2 pt-2 border-t flex justify-end gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setIsBuilderAddingUser(false)}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-xs font-medium cursor-pointer"
+                    >
+                      إلغاء
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs shadow-xs transition cursor-pointer"
+                    >
+                      إنشاء هذا الحساب
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -3440,6 +4768,279 @@ export default function BuilderPage() {
                   Visit Page
                 </a>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Adalo Data Picker & Relationship Explorer drawer overlay */}
+      {dataPickerIsOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in" dir="rtl">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-[80vh] max-h-[700px] animate-scale-up">
+            <div className="px-6 py-4 border-b bg-indigo-600 text-white flex justify-between items-center text-right shrink-0">
+              <div>
+                <h3 className="text-sm font-extrabold flex items-center gap-2">
+                  <span>🪄 مستكشف العلاقات ومنتقي البيانات (Adalo Relationship Explorer)</span>
+                </h3>
+                <p className="text-3xs text-indigo-100 mt-1">تصفح مسارات البيانات والعلاقات بلا حدود لربطها ديناميكياً بالمكونات</p>
+              </div>
+              <button
+                onClick={() => {
+                  setDataPickerIsOpen(false);
+                  setDataPickerTargetField(null);
+                  setDataPickerPathStack([]);
+                }}
+                className="text-white/80 hover:text-white p-1 text-md font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Current Path Breadcrumbs */}
+            <div className="bg-indigo-50 px-6 py-3 border-b flex flex-wrap items-center gap-1.5 text-xs text-indigo-950 font-bold">
+              <span className="text-gray-500 font-normal">المسار الحالي:</span>
+              <span 
+                className={`px-1.5 py-0.5 rounded ${dataPickerPathStack.length === 0 ? "bg-indigo-200 text-indigo-900 border border-indigo-250" : "hover:underline cursor-pointer"}`}
+                onClick={() => setDataPickerPathStack([])}
+              >
+                الرئيسية (Roots)
+              </span>
+              {dataPickerPathStack.map((path, idx) => (
+                <span key={idx} className="flex items-center gap-1">
+                  <span className="text-gray-400 font-mono"> &gt; </span>
+                  <span 
+                    className={`px-1.5 py-0.5 rounded ${idx === dataPickerPathStack.length - 1 ? "bg-indigo-600 text-white" : "hover:underline cursor-pointer bg-indigo-100"}`}
+                    onClick={() => setDataPickerPathStack(dataPickerPathStack.slice(0, idx + 1))}
+                  >
+                    {path}
+                  </span>
+                </span>
+              ))}
+            </div>
+
+            {/* Main Tree Explorer Area */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-4 text-right">
+              {dataPickerPathStack.length === 0 ? (
+                /* Root Categories */
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-gray-500 mb-3">حدد مصدراً للبيانات الديناميكية (Root Data Sources):</h4>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Logged In User */}
+                    <button
+                      type="button"
+                      onClick={() => setDataPickerPathStack(["Logged In User"])}
+                      className="p-4 border rounded-xl hover:border-indigo-500 hover:bg-indigo-50/50 transition text-right flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="flex items-center space-x-3 space-x-reverse">
+                        <span className="text-2xl">👤</span>
+                        <div>
+                          <p className="text-xs font-extrabold text-gray-800">العضو المسجل حالياً (Logged In User)</p>
+                          <p className="text-3xs text-gray-400 mt-0.5">البيانات الشخصية للحساب النشط مثل البريد والاسم</p>
+                        </div>
+                      </div>
+                      <span className="text-gray-400 font-mono group-hover:translate-x-[-4px] transition">&gt;</span>
+                    </button>
+
+                    {/* Current Record */}
+                    <button
+                      type="button"
+                      onClick={() => setDataPickerPathStack(["Current Record"])}
+                      className="p-4 border rounded-xl hover:border-indigo-500 hover:bg-indigo-50/50 transition text-right flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="flex items-center space-x-3 space-x-reverse">
+                        <span className="text-2xl">📝</span>
+                        <div>
+                          <p className="text-xs font-extrabold text-gray-800">السجل الحالي (Current Record)</p>
+                          <p className="text-3xs text-gray-400 mt-0.5">بيانات السجل المعروض بالصفحة الحالية</p>
+                        </div>
+                      </div>
+                      <span className="text-gray-400 font-mono group-hover:translate-x-[-4px] transition">&gt;</span>
+                    </button>
+
+                    {/* Current List Item */}
+                    <button
+                      type="button"
+                      onClick={() => setDataPickerPathStack(["Current List Item"])}
+                      className="p-4 border rounded-xl hover:border-indigo-500 hover:bg-indigo-50/50 transition text-right flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="flex items-center space-x-3 space-x-reverse">
+                        <span className="text-2xl">📋</span>
+                        <div>
+                          <p className="text-xs font-extrabold text-gray-800">عنصر السلسلة الحالي (Current List Item)</p>
+                          <p className="text-3xs text-gray-400 mt-0.5">العنصر النشط داخل الحلقات المكررة كالقوائم</p>
+                        </div>
+                      </div>
+                      <span className="text-gray-400 font-mono group-hover:translate-x-[-4px] transition">&gt;</span>
+                    </button>
+
+                    {/* URL Parameters */}
+                    <button
+                      type="button"
+                      onClick={() => setDataPickerPathStack(["URL Parameters"])}
+                      className="p-4 border rounded-xl hover:border-indigo-500 hover:bg-indigo-50/50 transition text-right flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="flex items-center space-x-3 space-x-reverse">
+                        <span className="text-2xl">🔗</span>
+                        <div>
+                          <p className="text-xs font-extrabold text-gray-800">مغيرات الرابط (URL Parameters)</p>
+                          <p className="text-3xs text-gray-400 mt-0.5">المتغيرات الممررة في شريط عنوان المتصفح</p>
+                        </div>
+                      </div>
+                      <span className="text-gray-400 font-mono group-hover:translate-x-[-4px] transition">&gt;</span>
+                    </button>
+
+                    {/* Custom & Local State */}
+                    <button
+                      type="button"
+                      onClick={() => setDataPickerPathStack(["Custom State"])}
+                      className="p-4 border rounded-xl hover:border-indigo-500 hover:bg-indigo-50/50 transition text-right flex items-center justify-between group cursor-pointer"
+                    >
+                      <div className="flex items-center space-x-3 space-x-reverse">
+                        <span className="text-2xl">⚙️</span>
+                        <div>
+                          <p className="text-xs font-extrabold text-gray-800">حالة الذاكرة المؤقتة (Local State)</p>
+                          <p className="text-3xs text-gray-400 mt-0.5">المتغيرات المحلية للمتصفح وحالة الصفحة</p>
+                        </div>
+                      </div>
+                      <span className="text-gray-400 font-mono group-hover:translate-x-[-4px] transition">&gt;</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Inside a node path - traverse fields and relations dynamically */
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="text-xs font-bold text-gray-600">عناصر وحقول المستوى الحالي:</span>
+                    <button 
+                      type="button"
+                      className="text-3xs text-indigo-600 hover:underline cursor-pointer"
+                      onClick={() => setDataPickerPathStack(prev => prev.slice(0, -1))}
+                    >
+                      ↩ رجوع مستوى واحد للوراء
+                    </button>
+                  </div>
+
+                  {/* Resolve schema of the current node path */}
+                  {(() => {
+                    const currentRoot = dataPickerPathStack[0];
+                    let currentTableId = "";
+                    
+                    if (currentRoot === "Logged In User") {
+                      currentTableId = "site_users";
+                    } else {
+                      let resolvedTable = null;
+                      if (dataPickerPathStack.length === 1) {
+                        resolvedTable = dbEditSelectedTable;
+                      } else {
+                        let walkTable = dbEditSelectedTable || userTables.find(t => t.id === "site_users");
+                        for (let i = 1; i < dataPickerPathStack.length; i++) {
+                          const stepName = dataPickerPathStack[i];
+                          const relField = walkTable?.fields?.find((f: any) => f.name === stepName && f.type === "relationship");
+                          if (relField) {
+                            walkTable = userTables.find(t => t.id === relField.relatedTableId);
+                          }
+                        }
+                        resolvedTable = walkTable;
+                      }
+                      currentTableId = resolvedTable?.id || "";
+                    }
+
+                    const resolvedTable = userTables.find(t => t.id === currentTableId) || dbEditSelectedTable;
+                    
+                    if (!resolvedTable) {
+                      return (
+                        <div className="text-center py-8">
+                          <p className="text-xs text-gray-500">لا توجد حقول أو علاقات معرفة لهذا المسار بعد.</p>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectToken(dataPickerPathStack.join(" > "))}
+                            className="mt-3 px-4 py-2 bg-indigo-600 text-white rounded text-xs"
+                          >
+                            اختيار هذا الجزء كلياً
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="divide-y border rounded-xl bg-white overflow-hidden">
+                        {resolvedTable.fields.map((field: any, idx: number) => {
+                          const isRel = field.type === "relationship";
+                          const fullFieldPath = [...dataPickerPathStack, field.name].join(" > ");
+                          
+                          if (isRel) {
+                            return (
+                              <div key={idx} className="p-3.5 flex items-center justify-between hover:bg-gray-50 transition">
+                                <div className="flex items-center space-x-3 space-x-reverse">
+                                  <span className="text-sm">🔗</span>
+                                  <div>
+                                    <p className="text-xs font-bold text-gray-800">{field.name} (علاقة)</p>
+                                    <p className="text-3xs text-gray-400 mt-0.5">
+                                      مرتبط بجدول: {userTables.find(t => t.id === field.relatedTableId)?.name || field.relatedTableId} ({field.relationType})
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSelectToken(`COUNT(${fullFieldPath})`)}
+                                    className="px-2 py-1 text-3xs font-extrabold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded cursor-pointer transition"
+                                    title="حساب عدد العناصر المرتبطة تلقائياً كـ COUNT"
+                                  >
+                                    🧮 COUNT
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setDataPickerPathStack([...dataPickerPathStack, field.name])}
+                                    className="px-3 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                                  >
+                                    دخول العلاقات &gt;
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div key={idx} className="p-3.5 flex items-center justify-between hover:bg-gray-50 transition">
+                                <div className="flex items-center space-x-3 space-x-reverse">
+                                  <span className="text-sm">🔹</span>
+                                  <div>
+                                    <p className="text-xs font-bold text-gray-800">{field.name}</p>
+                                    <p className="text-3xs text-gray-400 font-mono mt-0.5">نوع الحقل: {field.type}</p>
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectToken(fullFieldPath)}
+                                  className="px-3.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-semibold cursor-pointer shadow-xs"
+                                >
+                                  إدراج الحقل
+                                </button>
+                              </div>
+                            );
+                          }
+                        })}
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+
+            <div className="px-6 py-4 border-t bg-gray-50 flex justify-between items-center shrink-0" dir="rtl">
+              <span className="text-3xs text-gray-405">💡 المسار المستخرج سيتحول ديناميكياً عند فتح التطبيق ليمد المكون بالبيانات المطلوبة</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setDataPickerIsOpen(false);
+                  setDataPickerTargetField(null);
+                  setDataPickerPathStack([]);
+                }}
+                className="px-4 py-2 border border-gray-300 text-gray-700 hover:bg-gray-100 rounded-lg text-xs font-medium cursor-pointer"
+              >
+                إغلاق المستكشف
+              </button>
             </div>
           </div>
         </div>
