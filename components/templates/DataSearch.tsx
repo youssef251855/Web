@@ -41,10 +41,10 @@ export default function DataSearch({ tableId, placeholder = "Search..." }: { tab
       if (error) throw error;
       
       if (allData) {
-        const matchedRecords = allData.filter(r => {
+        const matchedRecords = allData.filter((r: any) => {
           const d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
-          return Object.values(d).some(val => String(val).toLowerCase().includes(term));
-        }).map(r => typeof r.data === 'string' ? JSON.parse(r.data) : r.data);
+          return Object.values(d).some((val: any) => String(val).toLowerCase().includes(term));
+        }).map((r: any) => typeof r.data === 'string' ? JSON.parse(r.data) : r.data);
         
         setResults(matchedRecords);
       }

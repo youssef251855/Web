@@ -94,18 +94,38 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden w-full relative">
-        {/* Mobile Header */}
-        <header className="bg-white border-b p-4 flex justify-between items-center md:hidden shrink-0">
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="p-1 -ml-1 text-gray-600 hover:bg-gray-100 rounded-md transition focus:outline-none"
-              >
-                <Menu className="w-6 h-6" />
-              </button>
-              <h1 className="text-xl font-bold text-gray-800 tracking-tighter">Joex</h1>
+        {/* Top Header Bar for Desktop & Mobile */}
+        <header className="bg-white border-b px-5 py-3 flex justify-between items-center shrink-0 z-30 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-1.5 -ml-1 text-gray-600 hover:bg-gray-100 rounded-lg transition md:hidden focus:outline-none"
+              title="فتح القائمة"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-gray-800 text-sm hidden sm:inline">لوحة التحكم</span>
+              <span className="text-gray-300 hidden sm:inline">/</span>
+              <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-md capitalize">
+                {pathname === '/dashboard' ? 'الصفحات (Pages)' : 
+                 pathname === '/dashboard/database' ? 'قواعد البيانات (Database)' :
+                 pathname === '/dashboard/files' ? 'الملفات (Files)' :
+                 pathname === '/dashboard/users' ? 'المستخدمين (Users)' :
+                 pathname === '/dashboard/settings' ? 'الإعدادات (Settings)' : 'Dashboard'}
+              </span>
             </div>
-            <button onClick={logout} className="p-2 -mr-2 text-gray-500 hover:bg-red-50 hover:text-red-600 transition rounded-md"><LogOut className="w-5 h-5" /></button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={logout} 
+              className="p-2 text-gray-500 hover:bg-red-50 hover:text-red-600 transition rounded-lg md:hidden"
+              title="تسجيل الخروج"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto relative w-full">

@@ -1,0 +1,193 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User profile in the application",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "The user email"
+        },
+        "username": {
+          "type": "string",
+          "description": "The custom user username or display name"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["email", "username"]
+    },
+    "Page": {
+      "title": "Page Builder Document",
+      "description": "A page designed and built by the user",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "content": {
+          "type": "object"
+        },
+        "customDomain": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["userId", "title", "slug"]
+    },
+    "Table": {
+      "title": "Database Table Builder schema",
+      "description": "Schema definition for user database",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["userId", "name"]
+    },
+    "Record": {
+      "title": "Database Table record item",
+      "description": "A single data row containing custom JSON key-values",
+      "type": "object",
+      "properties": {
+        "tableId": {
+          "type": "string"
+        },
+        "userId": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["tableId", "userId", "data"]
+    },
+    "UserSettings": {
+      "title": "User settings document",
+      "description": "Preferences and key integrations",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "settings": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["userId"]
+    },
+    "File": {
+      "title": "Media File Record",
+      "description": "Media uploaded via Cloudinary with its Firestore tracking record",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "resource_type": {
+          "type": "string"
+        },
+        "size": {
+          "type": "number"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["url", "name"]
+    },
+    "SiteUser": {
+      "title": "Site Auth End User",
+      "description": "End-user accounts registered on built pages",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "role": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string"
+        }
+      },
+      "required": ["ownerId", "email", "name"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profile collection"
+    },
+    "/pages/{pageId}": {
+      "schema": { "$ref": "#/entities/Page" },
+      "description": "Custom built pages collection"
+    },
+    "/tables/{tableId}": {
+      "schema": { "$ref": "#/entities/Table" },
+      "description": "Database builder tables collection"
+    },
+    "/records/{recordId}": {
+      "schema": { "$ref": "#/entities/Record" },
+      "description": "Table record documents collection"
+    },
+    "/user_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/UserSettings" },
+      "description": "User preferences and system config"
+    },
+    "/files/{fileId}": {
+      "schema": { "$ref": "#/entities/File" },
+      "description": "Cloudinary uploaded files and video records"
+    },
+    "/site_users/{siteUserId}": {
+      "schema": { "$ref": "#/entities/SiteUser" },
+      "description": "Built sites registered users"
+    }
+  }
+}

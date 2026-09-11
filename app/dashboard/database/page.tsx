@@ -3,7 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
-import { Plus, Trash2, Save, Database as DbIcon, Type, Hash, Calendar, Settings, ListPlus, LayoutList, Upload } from 'lucide-react';
+import { Plus, Trash2, Save, Database as DbIcon, Type, Hash, Calendar, Settings, ListPlus, LayoutList, Upload, Download, FileSpreadsheet, Sparkles, RefreshCw, Layers } from 'lucide-react';
+import { autoSeedTableRows, generateMockRows } from '@/lib/table-generator';
+import { exportRecordsToCSV, downloadSampleCSVTemplate, parseCSVText } from '@/lib/csv-helper';
+import AppwriteCSVModal from '@/components/AppwriteCSVModal';
 
 interface Field {
   id: string;
@@ -28,6 +31,7 @@ export default function DatabasePage() {
   const [viewMode, setViewMode] = useState<'schema' | 'data'>('schema');
   const [records, setRecords] = useState<any[]>([]);
   const [loadingRecords, setLoadingRecords] = useState(false);
+  const [isAppwriteModalOpen, setIsAppwriteModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchTables = async () => {
@@ -70,7 +74,7 @@ export default function DatabasePage() {
             
           if (error) throw error;
           
-          const parsedRecords = data.map(record => ({
+          const parsedRecords = (data || []).map((record: any) => ({
             id: record.id,
             created_at: record.created_at,
             ...(typeof record.data === 'string' ? JSON.parse(record.data) : record.data)
@@ -88,14 +92,18 @@ export default function DatabasePage() {
     fetchTableRecords();
   }, [viewMode, selectedTable]);
 
+  const [isGeneratingRows, setIsGeneratingRows] = useState(false);
+
   const handleCreateTable = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !newTableName.trim()) return;
     setIsCreatingTable(true);
     
-    // Auto-create an 'id' and 'name' field by default
+    // Auto-create standard intuitive fields based on table name
     const defaultFields: Field[] = [
-      { id: Date.now().toString(), name: 'Name', type: 'text' }
+      { id: '1', name: 'Name', type: 'text' },
+      { id: '2', name: 'Status', type: 'text' },
+      { id: '3', name: 'Created_Date', type: 'date' }
     ];
 
     try {
@@ -103,7 +111,7 @@ export default function DatabasePage() {
         .from('tables')
         .insert({
           user_id: user.id,
-          name: newTableName,
+          name: newTableName.trim(),
           fields: JSON.stringify(defaultFields),
         })
         .select('id')
@@ -111,14 +119,73 @@ export default function DatabasePage() {
         
       if (error) throw error;
       
-      const newTable: Table = { id: data.id, name: newTableName, fields: defaultFields };
+      const newTable: Table = { id: data.id, name: newTableName.trim(), fields: defaultFields };
       setTables([...tables, newTable]);
       setSelectedTable(newTable);
       setNewTableName('');
+
+      // Auto-generate and seed 3 initial demo rows right away!
+      const seedResult = await autoSeedTableRows(data.id, user.id, newTable.name, defaultFields, 3);
+      if (seedResult.success && seedResult.inserted.length > 0) {
+        setRecords(seedResult.inserted);
+      }
     } catch (error) {
       console.error("Error creating table", error);
     } finally {
       setIsCreatingTable(false);
+    }
+  };
+
+  const handleAutoGenerateRows = async (count: number = 3) => {
+    if (!selectedTable || !user) return;
+    setIsGeneratingRows(true);
+    try {
+      const seedResult = await autoSeedTableRows(
+        selectedTable.id,
+        user.id,
+        selectedTable.name,
+        selectedTable.fields,
+        count
+      );
+      if (seedResult.success && seedResult.inserted) {
+        setRecords(prev => [...prev, ...seedResult.inserted]);
+      } else {
+        alert("تعذر توليد الصفوف تلقائياً. تأكد من إعدادات قاعدة البيانات.");
+      }
+    } catch (err) {
+      console.error("Error auto-generating rows:", err);
+    } finally {
+      setIsGeneratingRows(false);
+    }
+  };
+
+  const handleDeleteRecord = async (recordId: string) => {
+    if (!confirm('هل أنت متأكد من رغبتك في حذف هذا الصف؟')) return;
+    try {
+      const { error } = await supabase
+        .from('records')
+        .delete()
+        .eq('id', recordId);
+      if (error) throw error;
+      setRecords(prev => prev.filter(r => r.id !== recordId));
+    } catch (err: any) {
+      console.error('Error deleting record:', err);
+      alert('فشل حذف السجل: ' + err.message);
+    }
+  };
+
+  const handleClearAllRecords = async () => {
+    if (!selectedTable || !confirm('هل أنت متأكد من حذف جميع الصفوف في هذا الجدول؟')) return;
+    try {
+      const { error } = await supabase
+        .from('records')
+        .delete()
+        .eq('table_id', selectedTable.id);
+      if (error) throw error;
+      setRecords([]);
+    } catch (err: any) {
+      console.error('Error clearing records:', err);
+      alert('فشل مسح السجلات: ' + err.message);
     }
   };
 
@@ -252,6 +319,171 @@ export default function DatabasePage() {
     e.target.value = '';
   };
 
+  const handleExportCSV = () => {
+    if (!selectedTable) return;
+    const success = exportRecordsToCSV(selectedTable.name, selectedTable.fields, records);
+    if (!success) {
+      alert('حدث خطأ أثناء تصدير ملف CSV');
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    if (!selectedTable) return;
+    downloadSampleCSVTemplate(selectedTable.name, selectedTable.fields);
+  };
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedTable || !user) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result;
+        if (typeof text !== 'string') return;
+
+        const parseResult = parseCSVText(text);
+        if (parseResult.error || parseResult.rows.length === 0) {
+          alert(parseResult.error || 'ملف CSV لا يحتوي على أي صفوف صالحة للإدراج.');
+          return;
+        }
+
+        // Check if there are new columns in CSV that don't exist in current table fields
+        const existingFieldNames = new Set(selectedTable.fields.map(f => f.name.toLowerCase()));
+        const newFieldsToAdd: Field[] = [];
+        parseResult.headers.forEach((h, idx) => {
+          if (h.toLowerCase() !== 'id' && h.toLowerCase() !== 'created_at' && !existingFieldNames.has(h.toLowerCase())) {
+            newFieldsToAdd.push({
+              id: `${Date.now()}_${idx}`,
+              name: h,
+              type: 'text'
+            });
+            existingFieldNames.add(h.toLowerCase());
+          }
+        });
+
+        // Update table schema if new fields found
+        let currentFields = selectedTable.fields;
+        if (newFieldsToAdd.length > 0) {
+          currentFields = [...selectedTable.fields, ...newFieldsToAdd];
+          await supabase
+            .from('tables')
+            .update({ fields: JSON.stringify(currentFields) })
+            .eq('id', selectedTable.id);
+          
+          setSelectedTable({ ...selectedTable, fields: currentFields });
+          setTables(tables.map(t => t.id === selectedTable.id ? { ...t, fields: currentFields } : t));
+        }
+
+        // Insert rows into Supabase records
+        const recordsToInsert = parseResult.rows.map(row => ({
+          table_id: selectedTable.id,
+          user_id: user.id,
+          data: JSON.stringify(row),
+        }));
+
+        const { data, error } = await supabase
+          .from('records')
+          .insert(recordsToInsert)
+          .select('*');
+
+        if (error) throw error;
+
+        const insertedRecords = (data || []).map((record: any, index: number) => ({
+          id: record.id,
+          created_at: record.created_at || new Date().toISOString(),
+          ...(typeof record.data === 'string' ? JSON.parse(record.data) : record.data || parseResult.rows[index] || {})
+        }));
+
+        setRecords(prev => [...prev, ...insertedRecords]);
+        alert(`🎉 تم استيراد ${insertedRecords.length} صف بنجاح من ملف الـ CSV!`);
+      } catch (error: any) {
+        console.error('Failed to import CSV:', error);
+        alert('فشل استيراد ملف CSV: ' + (error.message || 'يرجى التأكد من صحة الملف'));
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+    e.target.value = '';
+  };
+
+  const handleCreateNewTableFromCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const rawName = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ') || 'New Collection';
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result;
+        if (typeof text !== 'string') return;
+
+        const parseResult = parseCSVText(text);
+        if (parseResult.error || parseResult.rows.length === 0) {
+          alert(parseResult.error || 'ملف CSV لا يحتوي على بيانات صالحة.');
+          return;
+        }
+
+        const fields: Field[] = parseResult.headers
+          .filter(h => h.toLowerCase() !== 'id' && h.toLowerCase() !== 'created_at')
+          .map((h, idx) => ({
+            id: String(idx + 1),
+            name: h,
+            type: typeof parseResult.rows[0]?.[h] === 'number' ? 'number' : 'text'
+          }));
+
+        if (fields.length === 0) {
+          fields.push({ id: '1', name: 'Name', type: 'text' });
+        }
+
+        const { data: tableData, error: tableError } = await supabase
+          .from('tables')
+          .insert({
+            user_id: user.id,
+            name: rawName,
+            fields: JSON.stringify(fields),
+          })
+          .select('id')
+          .single();
+
+        if (tableError) throw tableError;
+
+        const newTable: Table = { id: tableData.id, name: rawName, fields };
+
+        // Insert records
+        const recordsToInsert = parseResult.rows.map(row => ({
+          table_id: tableData.id,
+          user_id: user.id,
+          data: JSON.stringify(row),
+        }));
+
+        const { data: insertedRecords, error: recordError } = await supabase
+          .from('records')
+          .insert(recordsToInsert)
+          .select('*');
+
+        if (recordError) throw recordError;
+
+        const parsedRecords = (insertedRecords || []).map((record: any, index: number) => ({
+          id: record.id,
+          created_at: record.created_at || new Date().toISOString(),
+          ...(typeof record.data === 'string' ? JSON.parse(record.data) : record.data || parseResult.rows[index] || {})
+        }));
+
+        setTables(prev => [...prev, newTable]);
+        setSelectedTable(newTable);
+        setRecords(parsedRecords);
+        alert(`🎉 تم إنشاء جدول "${rawName}" واستيراد ${parsedRecords.length} سجل بنجاح من ملف الـ CSV!`);
+      } catch (err: any) {
+        console.error('Error creating table from CSV:', err);
+        alert('فشل إنشاء الجدول من ملف CSV: ' + err.message);
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+    e.target.value = '';
+  };
+
   const handleDeleteTable = async () => {
     if (!selectedTable || !confirm('Are you sure you want to delete this table? All data will be lost.')) return;
     try {
@@ -297,7 +529,7 @@ export default function DatabasePage() {
           ))}
         </div>
 
-        <div className="p-4 border-t bg-gray-50">
+        <div className="p-4 border-t bg-gray-50 flex flex-col gap-2">
           <form onSubmit={handleCreateTable} className="flex gap-2">
             <input
               type="text"
@@ -307,10 +539,26 @@ export default function DatabasePage() {
               className="flex-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
               required
             />
-            <button type="submit" disabled={isCreatingTable} className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50">
+            <button type="submit" disabled={isCreatingTable} className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 cursor-pointer">
               <Plus className="w-4 h-4" />
             </button>
           </form>
+
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            id="create-table-csv-input"
+            className="hidden"
+            onChange={handleCreateNewTableFromCSV}
+          />
+          <button
+            type="button"
+            onClick={() => document.getElementById('create-table-csv-input')?.click()}
+            className="w-full py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-md text-xs font-semibold flex items-center justify-center transition cursor-pointer"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+            إنشاء جدول جديد من ملف CSV
+          </button>
         </div>
       </div>
 
@@ -324,15 +572,102 @@ export default function DatabasePage() {
                   <h1 className="text-2xl font-bold text-gray-900">{selectedTable.name}</h1>
                   <p className="text-sm text-gray-500 mt-1">Manage schema and data for this collection.</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   {viewMode === 'data' && (
-                    <button 
-                      onClick={handleOpenAddRecord}
-                      className="text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md transition flex items-center text-sm font-medium border border-blue-200"
-                    >
-                      <Plus className="w-4 h-4 mr-2" /> Add Record
-                    </button>
+                    <>
+                      <div className="flex items-center rounded-md border border-indigo-200 bg-indigo-50/70 p-0.5 shadow-2xs">
+                        <button
+                          onClick={() => handleAutoGenerateRows(3)}
+                          disabled={isGeneratingRows}
+                          className="text-indigo-700 hover:bg-indigo-100/80 px-2.5 py-1.5 rounded-sm transition flex items-center text-xs font-semibold disabled:opacity-50"
+                          title="إنشاء 3 صفوف ذكية تلقائياً مع قيم نموذجية مطابقة لنوع الحقول"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 mr-1.5 text-indigo-600 animate-pulse" />
+                          {isGeneratingRows ? 'جاري التوليد...' : 'توليد صفوف تلقائياً (3)'}
+                        </button>
+                        <div className="h-4 w-px bg-indigo-200 mx-0.5" />
+                        <button
+                          onClick={() => handleAutoGenerateRows(5)}
+                          disabled={isGeneratingRows}
+                          className="text-indigo-600 hover:bg-indigo-100/80 px-2 py-1.5 rounded-sm transition text-xs font-medium disabled:opacity-50"
+                          title="توليد 5 صفوف"
+                        >
+                          +5
+                        </button>
+                        <button
+                          onClick={() => handleAutoGenerateRows(10)}
+                          disabled={isGeneratingRows}
+                          className="text-indigo-600 hover:bg-indigo-100/80 px-2 py-1.5 rounded-sm transition text-xs font-medium disabled:opacity-50"
+                          title="توليد 10 صفوف"
+                        >
+                          +10
+                        </button>
+                      </div>
+
+                      <button 
+                        onClick={handleOpenAddRecord}
+                        className="text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-md transition flex items-center text-sm font-medium border border-blue-200 shadow-2xs"
+                      >
+                        <Plus className="w-4 h-4 mr-1.5" /> Add Record
+                      </button>
+
+                      {records.length > 0 && (
+                        <button
+                          onClick={handleClearAllRecords}
+                          className="text-gray-500 hover:text-red-600 hover:bg-red-50 px-2.5 py-2 rounded-md transition flex items-center text-xs font-medium border border-transparent"
+                          title="مسح جميع السجلات"
+                        >
+                          Clear All
+                        </button>
+                      )}
+
+                      {/* Export CSV */}
+                      <button
+                        onClick={handleExportCSV}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-md transition flex items-center text-xs font-semibold shadow-2xs cursor-pointer"
+                        title="تصدير وتحميل بيانات هذا الجدول كملف CSV بالترميز العربي UTF-8"
+                      >
+                        <Download className="w-3.5 h-3.5 mr-1.5" />
+                        تصدير CSV
+                      </button>
+                    </>
                   )}
+                  
+                  {/* CSV File Input */}
+                  <input
+                    type="file"
+                    accept=".csv,text/csv"
+                    id={`import-csv-${selectedTable.id}`}
+                    className="hidden"
+                    onChange={handleImportCSV}
+                  />
+                  <button
+                    onClick={() => document.getElementById(`import-csv-${selectedTable.id}`)?.click()}
+                    className="text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 px-3 py-1.5 rounded-md transition flex items-center text-xs font-semibold shadow-2xs cursor-pointer"
+                    title="استيراد وتغذية الجدول بسجلات من ملف CSV"
+                  >
+                    <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" />
+                    استيراد CSV
+                  </button>
+
+                  {/* Appwrite CSV Modal Button */}
+                  <button
+                    onClick={() => setIsAppwriteModalOpen(true)}
+                    className="bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white px-3 py-1.5 rounded-md transition flex items-center text-xs font-semibold shadow-2xs cursor-pointer gap-1.5"
+                    title="تصدير وتنزيل ملفات CSV متوافقة مع Appwrite Database و Auth"
+                  >
+                    <DbIcon className="w-3.5 h-3.5" />
+                    <span>ملف Appwrite CSV</span>
+                  </button>
+
+                  <button
+                    onClick={handleDownloadTemplate}
+                    className="text-gray-600 hover:bg-gray-100 border border-gray-200 px-2.5 py-1.5 rounded-md transition flex items-center text-xs font-medium shadow-2xs cursor-pointer"
+                    title="تحميل نموذج CSV فارغ مع الحقول الحالية"
+                  >
+                    نموذج CSV
+                  </button>
+
                   <input
                     type="file"
                     accept=".json"
@@ -342,9 +677,10 @@ export default function DatabasePage() {
                   />
                   <button
                     onClick={() => document.getElementById(`import-json-${selectedTable.id}`)?.click()}
-                    className="text-gray-700 hover:bg-gray-100 px-3 py-2 rounded-md transition flex items-center text-sm font-medium border"
+                    className="text-gray-600 hover:bg-gray-100 px-2.5 py-1.5 rounded-md transition flex items-center text-xs font-medium border border-gray-200 shadow-2xs"
+                    title="استيراد ملف JSON"
                   >
-                    <Upload className="w-4 h-4 mr-2" /> Import JSON
+                    <Upload className="w-3.5 h-3.5 mr-1" /> JSON
                   </button>
                   <button 
                     onClick={handleDeleteTable}
@@ -452,9 +788,36 @@ export default function DatabasePage() {
               ) : (
                 <div className="w-full bg-white rounded-xl border shadow-sm overflow-hidden overflow-x-auto">
                    {loadingRecords ? (
-                     <div className="p-8 text-center text-gray-500">Loading records...</div>
+                     <div className="p-12 text-center text-gray-500 text-sm">
+                       <RefreshCw className="w-6 h-6 animate-spin mx-auto text-indigo-500 mb-2" />
+                       جاري تحميل سجلات البيانات...
+                     </div>
                    ) : records.length === 0 ? (
-                     <div className="p-8 text-center text-gray-500">No records found. Start adding data in your app!</div>
+                     <div className="p-12 text-center flex flex-col items-center justify-center max-w-md mx-auto">
+                       <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-full flex items-center justify-center mb-3">
+                         <Sparkles className="w-6 h-6" />
+                       </div>
+                       <h3 className="text-base font-bold text-gray-800 mb-1">الجدول فارغ تماماً</h3>
+                       <p className="text-xs text-gray-500 mb-5 text-center">
+                         لا توجد أي صفوف مسجلة حالياً في هذا الجدول. يمكنك إنشاء صفوف تجريبية فوراً بضغطة زر أو إضافة سجل يدوياً.
+                       </p>
+                       <div className="flex items-center gap-3">
+                         <button
+                           onClick={() => handleAutoGenerateRows(3)}
+                           disabled={isGeneratingRows}
+                           className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-sm flex items-center transition cursor-pointer disabled:opacity-50"
+                         >
+                           <Sparkles className="w-4 h-4 mr-1.5" />
+                           {isGeneratingRows ? 'جاري التوليد التلقائي...' : '✨ إنشاء 3 صفوف تلقائية الآن'}
+                         </button>
+                         <button
+                           onClick={handleOpenAddRecord}
+                           className="border border-gray-300 hover:bg-gray-50 text-gray-700 text-xs font-medium px-3.5 py-2 rounded-lg transition"
+                         >
+                           + إضافة يدوية
+                         </button>
+                       </div>
+                     </div>
                    ) : (
                      <table className="w-full text-left text-sm whitespace-nowrap">
                        <thead className="bg-gray-50 border-b">
@@ -464,16 +827,28 @@ export default function DatabasePage() {
                            {selectedTable.fields.map(field => (
                              <th key={field.id} className="px-6 py-3 font-semibold text-gray-600">{field.name}</th>
                            ))}
+                           <th className="px-6 py-3 font-semibold text-gray-600 text-center">Actions</th>
                          </tr>
                        </thead>
                        <tbody className="divide-y">
                          {records.map((record, index) => (
                            <tr key={`${record.id}-${index}`} className="hover:bg-gray-50/50">
-                             <td className="px-6 py-4 font-mono text-xs text-gray-500">{record.id}</td>
-                             <td className="px-6 py-4 text-gray-500">{new Date(record.created_at).toLocaleString()}</td>
+                             <td className="px-6 py-4 font-mono text-xs text-gray-500">{String(record.id).slice(0, 8)}...</td>
+                             <td className="px-6 py-4 text-gray-500 text-xs">{new Date(record.created_at).toLocaleString('ar-EG', { hour12: true })}</td>
                              {selectedTable.fields.map((field, i) => (
-                               <td key={`cell-${record.id}-${field.id}-${i}`} className="px-6 py-4 truncate max-w-xs">{String(record[field.name] ?? '-')}</td>
+                               <td key={`cell-${record.id}-${field.id}-${i}`} className="px-6 py-4 truncate max-w-xs text-gray-800">
+                                 {String(record[field.name] ?? '-')}
+                               </td>
                              ))}
+                             <td className="px-6 py-4 text-center">
+                               <button
+                                 onClick={() => handleDeleteRecord(record.id)}
+                                 className="text-gray-400 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition"
+                                 title="حذف هذا الصف"
+                               >
+                                 <Trash2 className="w-4 h-4" />
+                               </button>
+                             </td>
                            </tr>
                          ))}
                        </tbody>
@@ -495,6 +870,14 @@ export default function DatabasePage() {
           </div>
         )}
       </div>
+
+      {/* Appwrite CSV Modal */}
+      <AppwriteCSVModal
+        isOpen={isAppwriteModalOpen}
+        onClose={() => setIsAppwriteModalOpen(false)}
+        currentTable={selectedTable ? { name: selectedTable.name, fields: selectedTable.fields } : undefined}
+        currentRecords={records}
+      />
     </div>
   );
 }

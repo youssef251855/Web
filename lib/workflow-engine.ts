@@ -148,7 +148,7 @@ export const executeWorkflow = async (
             const { data, error } = await query;
             if (error) throw error;
             if (step.params.saveToVariableId) {
-               const parsedData = data.map(d => typeof d.data === 'string' ? JSON.parse(d.data) : d.data);
+               const parsedData = (data || []).map((d: any) => typeof d.data === 'string' ? JSON.parse(d.data) : d.data);
                if (step.params.single) {
                  context.setVariable(step.params.saveToVariableId, parsedData[0] || null);
                } else {

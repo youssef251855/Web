@@ -1,15 +1,18 @@
-import { createClient } from '@supabase/supabase-js';
+// Seamless Firebase Firestore adapter replacing Supabase and Appwrite
+import { 
+  firebaseDb, 
+  OperationType, 
+  FirebaseClientUser, 
+  FirestoreQueryBuilder,
+  handleFirestoreError
+} from './firebase-db';
+import { db, auth } from './firebase';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+export { firebaseDb, OperationType, db, auth, handleFirestoreError };
+export type { FirebaseClientUser, FirebaseClientUser as AppwriteUser, FirebaseClientUser as User };
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Aliases ensuring 100% transparent backwards compatibility
+export const supabase = firebaseDb as any;
+export const appwrite = firebaseDb as any;
 
-export enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
+export default firebaseDb;

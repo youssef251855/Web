@@ -40,7 +40,7 @@ export default function LoginPage() {
         if (data.session) {
           router.push('/dashboard');
         } else {
-          setMessage('Please check your email to verify your account. If you just disabled verify email on Supabase, sign in instead.');
+          setMessage('Please check your email to verify your account. If email verification is disabled on Appwrite, sign in directly.');
         }
       }
     } catch (err: any) {
@@ -86,9 +86,23 @@ export default function LoginPage() {
               </p>
 
               {error && (
-                <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-400">{error}</p>
+                <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 flex flex-col gap-2">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-400">{error}</p>
+                  </div>
+                  {isLogin && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsLogin(false);
+                        setError(null);
+                      }}
+                      className="text-xs text-blue-400 hover:text-blue-300 font-medium text-left pl-8 underline transition-colors"
+                    >
+                      New user? Click here to create an account &rarr;
+                    </button>
+                  )}
                 </div>
               )}
 

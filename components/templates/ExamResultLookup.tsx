@@ -48,9 +48,9 @@ export default function ExamResultLookup({ tableId }: { tableId: string }) {
           .eq('table_id', tableId);
 
         if (allData) {
-          const matchedRecord = allData.find(r => {
+          const matchedRecord = allData.find((r: any) => {
             const d = typeof r.data === 'string' ? JSON.parse(r.data) : r.data;
-            return Object.values(d).some(val => String(val).trim() === searchTerm);
+            return Object.values(d).some((val: any) => String(val).trim() === searchTerm);
           });
           if (matchedRecord) {
              foundData = typeof matchedRecord.data === 'string' ? JSON.parse(matchedRecord.data) : matchedRecord.data;

@@ -26,26 +26,26 @@ export default function Dashboard() {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
 
-  useEffect(() => {
-    const fetchPages = async () => {
-      if (!user) return;
-      try {
-        const { data, error } = await supabase
-          .from('pages')
-          .select('*')
-          .eq('user_id', user.id);
-          
-        if (error) throw error;
-        setPages(data as Page[]);
-      } catch (error) {
-        console.error("Error fetching pages", error);
-      } finally {
-        setLoadingPages(false);
-      }
-    };
+  const loadPages = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('pages')
+        .select('*')
+        .eq('user_id', user.id);
+        
+      if (error) throw error;
+      setPages(data as Page[]);
+    } catch (error) {
+      console.error("Error fetching pages", error);
+    } finally {
+      setLoadingPages(false);
+    }
+  };
 
+  useEffect(() => {
     if (user) {
-      fetchPages();
+      loadPages();
     }
   }, [user]);
 
@@ -196,8 +196,13 @@ export default function Dashboard() {
         
       if (error) throw error;
       
+      const targetId = data?.id || (Array.isArray(data) ? data[0]?.id : null);
       setIsCreateModalOpen(false);
-      router.push(`/builder/${data.id}`);
+      if (targetId) {
+        router.push(`/builder/${targetId}`);
+      } else {
+        await loadPages();
+      }
     } catch (error) {
       console.error("Error creating page", error);
     } finally {
@@ -351,15 +356,15 @@ export default function Dashboard() {
 
         {/* Create Page Modal */}
         {isCreateModalOpen && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <div className="bg-[#0a0a0a] border border-zinc-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl">
-              <div className="px-6 py-5 border-b border-zinc-800 flex justify-between items-center">
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4 sm:p-6 backdrop-blur-sm overflow-y-auto">
+            <div className="bg-[#0a0a0a] border border-zinc-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl my-auto">
+              <div className="px-6 py-5 border-b border-zinc-800 flex justify-between items-center shrink-0">
                 <h3 className="text-lg font-semibold">Create New Project</h3>
-                <button onClick={() => setIsCreateModalOpen(false)} className="text-zinc-500 hover:text-zinc-300 transition-colors">
+                <button onClick={() => setIsCreateModalOpen(false)} className="text-zinc-500 hover:text-zinc-300 transition-colors text-2xl leading-none">
                   &times;
                 </button>
               </div>
-              <form onSubmit={handleCreatePage} className="p-6">
+              <form onSubmit={handleCreatePage} className="p-6 overflow-y-auto flex-1 flex flex-col">
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-zinc-400 mb-2">Project Title</label>
                   <input
@@ -373,64 +378,64 @@ export default function Dashboard() {
                   />
                 </div>
 
-                <div className="mb-8">
+                <div className="mb-6">
                   <label className="block text-sm font-medium text-zinc-400 mb-3">Starting Template</label>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div 
                       onClick={() => setSelectedTemplate('blank')}
-                      className={`border rounded-xl p-4 cursor-pointer transition relative ${selectedTemplate === 'blank' ? 'border-zinc-400 bg-zinc-900' : 'border-zinc-800 hover:border-zinc-700'}`}
+                      className={`border rounded-xl p-3 cursor-pointer transition relative ${selectedTemplate === 'blank' ? 'border-zinc-400 bg-zinc-900' : 'border-zinc-800 hover:border-zinc-700'}`}
                     >
                       {selectedTemplate === 'blank' && (
-                        <div className="absolute top-3 right-3 w-3 h-3 bg-white rounded-full"></div>
+                        <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-white rounded-full"></div>
                       )}
-                      <div className={`h-24 border rounded-lg mb-3 flex items-center justify-center ${selectedTemplate === 'blank' ? 'bg-[#000] border-zinc-800 text-zinc-300' : 'bg-[#000] border-zinc-800 text-zinc-600'}`}>
-                        <LayoutIcon className="w-8 h-8" />
+                      <div className={`h-16 border rounded-lg mb-2 flex items-center justify-center ${selectedTemplate === 'blank' ? 'bg-[#000] border-zinc-800 text-zinc-300' : 'bg-[#000] border-zinc-800 text-zinc-600'}`}>
+                        <LayoutIcon className="w-6 h-6" />
                       </div>
-                      <span className={`block font-medium text-sm ${selectedTemplate === 'blank' ? 'text-zinc-100' : 'text-zinc-500'}`}>Start Empty</span>
+                      <span className={`block font-medium text-xs text-center truncate ${selectedTemplate === 'blank' ? 'text-zinc-100' : 'text-zinc-500'}`}>Start Empty</span>
                     </div>
 
                     <div 
                       onClick={() => setSelectedTemplate('chat')}
-                      className={`border rounded-xl p-4 cursor-pointer transition relative ${selectedTemplate === 'chat' ? 'border-zinc-400 bg-zinc-900' : 'border-zinc-800 hover:border-zinc-700'}`}
+                      className={`border rounded-xl p-3 cursor-pointer transition relative ${selectedTemplate === 'chat' ? 'border-zinc-400 bg-zinc-900' : 'border-zinc-800 hover:border-zinc-700'}`}
                     >
                       {selectedTemplate === 'chat' && (
-                        <div className="absolute top-3 right-3 w-3 h-3 bg-white rounded-full"></div>
+                        <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-white rounded-full"></div>
                       )}
-                      <div className={`h-24 border rounded-lg mb-3 flex items-center justify-center ${selectedTemplate === 'chat' ? 'bg-[#000] border-zinc-800 text-zinc-300' : 'bg-[#000] border-zinc-800 text-zinc-600'}`}>
-                        <MessageSquare className="w-8 h-8" />
+                      <div className={`h-16 border rounded-lg mb-2 flex items-center justify-center ${selectedTemplate === 'chat' ? 'bg-[#000] border-zinc-800 text-zinc-300' : 'bg-[#000] border-zinc-800 text-zinc-600'}`}>
+                        <MessageSquare className="w-6 h-6" />
                       </div>
-                      <span className={`block font-medium text-sm ${selectedTemplate === 'chat' ? 'text-zinc-100' : 'text-zinc-500'}`}>Chat App</span>
+                      <span className={`block font-medium text-xs text-center truncate ${selectedTemplate === 'chat' ? 'text-zinc-100' : 'text-zinc-500'}`}>Chat App</span>
                     </div>
 
                     <div 
                       onClick={() => setSelectedTemplate('store')}
-                      className={`border rounded-xl p-4 cursor-pointer transition relative ${selectedTemplate === 'store' ? 'border-zinc-400 bg-zinc-900' : 'border-zinc-800 hover:border-zinc-700'}`}
+                      className={`border rounded-xl p-3 cursor-pointer transition relative ${selectedTemplate === 'store' ? 'border-zinc-400 bg-zinc-900' : 'border-zinc-800 hover:border-zinc-700'}`}
                     >
                       {selectedTemplate === 'store' && (
-                        <div className="absolute top-3 right-3 w-3 h-3 bg-white rounded-full"></div>
+                        <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-white rounded-full"></div>
                       )}
-                      <div className={`h-24 border rounded-lg mb-3 flex items-center justify-center ${selectedTemplate === 'store' ? 'bg-[#000] border-zinc-800 text-zinc-300' : 'bg-[#000] border-zinc-800 text-zinc-600'}`}>
-                        <CreditCard className="w-8 h-8" />
+                      <div className={`h-16 border rounded-lg mb-2 flex items-center justify-center ${selectedTemplate === 'store' ? 'bg-[#000] border-zinc-800 text-zinc-300' : 'bg-[#000] border-zinc-800 text-zinc-600'}`}>
+                        <CreditCard className="w-6 h-6" />
                       </div>
-                      <span className={`block font-medium text-sm ${selectedTemplate === 'store' ? 'text-zinc-100' : 'text-zinc-500'}`}>E-commerce</span>
+                      <span className={`block font-medium text-xs text-center truncate ${selectedTemplate === 'store' ? 'text-zinc-100' : 'text-zinc-500'}`}>E-commerce</span>
                     </div>
 
                     <div 
                       onClick={() => setSelectedTemplate('exam')}
-                      className={`border rounded-xl p-4 cursor-pointer transition relative ${selectedTemplate === 'exam' ? 'border-zinc-400 bg-zinc-900' : 'border-zinc-800 hover:border-zinc-700'}`}
+                      className={`border rounded-xl p-3 cursor-pointer transition relative ${selectedTemplate === 'exam' ? 'border-zinc-400 bg-zinc-900' : 'border-zinc-800 hover:border-zinc-700'}`}
                     >
                       {selectedTemplate === 'exam' && (
-                        <div className="absolute top-3 right-3 w-3 h-3 bg-white rounded-full"></div>
+                        <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-white rounded-full"></div>
                       )}
-                      <div className={`h-24 border rounded-lg mb-3 flex items-center justify-center ${selectedTemplate === 'exam' ? 'bg-[#000] border-zinc-800 text-zinc-300' : 'bg-[#000] border-zinc-800 text-zinc-600'}`}>
-                        <GraduationCap className="w-8 h-8" />
+                      <div className={`h-16 border rounded-lg mb-2 flex items-center justify-center ${selectedTemplate === 'exam' ? 'bg-[#000] border-zinc-800 text-zinc-300' : 'bg-[#000] border-zinc-800 text-zinc-600'}`}>
+                        <GraduationCap className="w-6 h-6" />
                       </div>
-                      <span className={`block font-medium text-sm ${selectedTemplate === 'exam' ? 'text-zinc-100' : 'text-zinc-500'}`}>Exam Results</span>
+                      <span className={`block font-medium text-xs text-center truncate ${selectedTemplate === 'exam' ? 'text-zinc-100' : 'text-zinc-500'}`}>Exam Results</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+                <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800 shrink-0 mt-auto">
                   <button
                     type="button"
                     onClick={() => setIsCreateModalOpen(false)}

@@ -126,7 +126,7 @@ export function AdvancedListRenderer({
     timeline_list: [
       { id: "tm1", title: "أول خطوة: التأسيس", desc: "إنشاء البنية التحتية وقائمة الكتل المخصصة للتحرير الفوري.", date: "يناير ٢٠٢٦" },
       { id: "tm2", title: "ثاني خطوة: التحديث", desc: "تطبيق مصمم هيكلية القائمة بملفات البيانات وتحريكها يدوياً.", date: "مارس ٢٠٢٦" },
-      { id: "tm3", title: "ثاني خطوة: للتكامل", desc: "ربط القوالب بـ Supabase ودمج ميزات تحديث البيانات اللحظي.", date: "يونيو ٢٠٢٦" }
+      { id: "tm3", title: "ثاني خطوة: للتكامل", desc: "ربط القوالب بـ Appwrite ودمج ميزات تحديث البيانات اللحظي.", date: "يونيو ٢٠٢٦" }
     ],
     carousel_list: [
       { id: "car1", title: "طفرة الذكاء الاصطناعي وبناء المواقع", image: "https://picsum.photos/seed/caro1/800/400", desc: "كيف غيرت الأدوات الذكية أساليب البرمجة الحديثة تماماً." },
@@ -948,7 +948,7 @@ export default function Renderer({
         setUserSettings(settingsData);
       }
       if (tablesData) {
-        const parsedTables = tablesData.map(t => ({
+        const parsedTables = tablesData.map((t: any) => ({
           ...t,
           fields: typeof t.fields === 'string' ? JSON.parse(t.fields) : t.fields
         }));
@@ -1657,60 +1657,6 @@ export default function Renderer({
         return (
           <div id={element.customId} style={elStyle} className={customClass}>
             {replaceVariablesInText(element.content)}
-          </div>
-        );
-      case "progress":
-        return (
-          <div id={element.customId} style={elStyle} className={`${customClass} flex flex-col gap-2 w-full`}>
-            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-              <div 
-                className="bg-blue-600 h-2.5 rounded-full transition-all duration-500 ease-out" 
-                style={{ width: `${Math.min(Math.max(Number(element.content) || 0, 0), 100)}%` }}
-              ></div>
-            </div>
-            {element.style?.showLabel !== false && (
-              <div className="text-right text-xs text-gray-500 font-medium">
-                {Number(element.content) || 0}%
-              </div>
-            )}
-          </div>
-        );
-      case "stat":
-        return (
-          <div id={element.customId} style={elStyle} className={`${customClass} flex flex-col items-center justify-center p-4 bg-white rounded-xl border shadow-sm`}>
-            <div className="text-3xl font-extrabold text-gray-900 tracking-tight">
-              {replaceVariablesInText(element.content?.value)}
-            </div>
-            <div className="text-sm text-gray-500 mt-1 font-medium">
-              {replaceVariablesInText(element.content?.label)}
-            </div>
-          </div>
-        );
-      case "checklist":
-        return (
-          <div id={element.customId} style={elStyle} className={`${customClass} flex flex-col gap-3 w-full`}>
-            {(Array.isArray(element.content) ? element.content : []).map((item: any, i: number) => (
-              <label key={i} className="flex items-center gap-3 cursor-pointer group p-2 hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-100">
-                <input
-                  type="checkbox"
-                  checked={item.checked}
-                  onChange={(e) => {
-                    if (!isBuilderMode) {
-                      const newContent = [...element.content as any[]];
-                      newContent[i].checked = e.target.checked;
-                      // Using setFormElementsValues or triggering update?
-                      // The app normally expects updateElement or executing events... but checklist is tricky.
-                      // Usually checklist state isn't managed automatically unless bound to data source.
-                    }
-                  }}
-                  disabled={isBuilderMode}
-                  className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 transition-shadow"
-                />
-                <span className={`text-sm ${item.checked ? 'text-gray-400 line-through' : 'text-gray-700'} font-medium select-none transition-colors`}>
-                  {replaceVariablesInText(item.text)}
-                </span>
-              </label>
-            ))}
           </div>
         );
       case "accordion":

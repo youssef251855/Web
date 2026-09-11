@@ -1,5 +1,6 @@
 {
   "name": "joex",
   "description": "A drag-and-drop website builder allowing users to create and publish their own web pages.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

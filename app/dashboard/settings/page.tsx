@@ -16,14 +16,14 @@ export default function SettingsPage() {
     const fetchSettings = async () => {
       if (!user) return;
       try {
-        const { data, error } = await supabase
+        const { data } = await supabase
           .from('user_settings')
           .select('settings')
           .eq('user_id', user.id)
           .maybeSingle(); 
 
-        if (data && data.settings) {
-          setAppName(data.settings.appName || 'My AI Studio App');
+        if (data && data.settings && data.settings.appName) {
+          setAppName(data.settings.appName);
         }
       } catch (error) {
         console.error("Error fetching settings", error);
@@ -46,39 +46,46 @@ export default function SettingsPage() {
           user_id: user.id,
           settings: {
             appName,
+            updatedAt: new Date().toISOString(),
           },
         }, { onConflict: 'user_id' });
         
       if (error) throw error;
       
-      setMessage('Settings saved successfully!');
-    } catch (error) {
-      console.error("Error saving settings", JSON.stringify(error, null, 2));
-      setMessage('Failed to save settings: ' + (error instanceof Error ? error.message : JSON.stringify(error)));
+      setMessage('تم حفظ الإعدادات بنجاح!');
+    } catch (error: any) {
+      console.error("Error saving settings", error);
+      setMessage('فشل حفظ الإعدادات: ' + (error instanceof Error ? error.message : JSON.stringify(error)));
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <div className="p-8 text-gray-500">Loading settings...</div>;
+  if (loading) return <div className="p-8 text-gray-500">جاري تحميل الإعدادات...</div>;
 
   return (
     <div className="p-8 max-w-4xl mx-auto w-full">
       <div className="flex justify-between items-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-          <SettingsIcon className="w-6 h-6 mr-2" /> Settings
-        </h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <SettingsIcon className="w-6 h-6 text-blue-600" /> 
+            إعدادات النظام / System Settings
+          </h2>
+          <p className="text-sm text-gray-500 mt-1">
+            تخصيص الإعدادات العامة واسم التطبيق
+          </p>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border p-6">
         <form onSubmit={handleSave} className="space-y-6">
           <div>
-            <h3 className="text-lg font-semibold border-b pb-2 mb-4 flex items-center">
-              General Settings
+            <h3 className="text-lg font-semibold border-b pb-2 mb-4 flex items-center text-gray-800">
+              الإعدادات العامة / General Settings
             </h3>
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">App Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">اسم التطبيق / App Name</label>
                 <input
                   type="text"
                   value={appName}
@@ -90,18 +97,18 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="pt-4 flex items-center justify-between">
+          <div className="pt-4 flex items-center justify-between border-t">
             {message && (
-              <span className={`text-sm ${message.includes('success') ? 'text-green-600' : 'text-red-600'}`}>
+              <span className={`text-sm ${message.includes('نجاح') ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}`}>
                 {message}
               </span>
             )}
             <button
               type="submit"
               disabled={saving}
-              className="ml-auto flex items-center bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
+              className="mr-auto ml-0 flex items-center bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-medium shadow-sm"
             >
-              <Save className="w-4 h-4 mr-2" /> {saving ? 'Saving...' : 'Save Settings'}
+              <Save className="w-4 h-4 ml-2 mr-0" /> {saving ? 'جاري الحفظ...' : 'حفظ الإعدادات'}
             </button>
           </div>
         </form>
